@@ -1,0 +1,80 @@
+# CRYS-L — Language Originality Statement
+
+**CRYS-L is an entirely original language created by Percy Rojas Masgo.**
+
+---
+
+## Language Design
+
+The CRYS-L grammar, syntax, keywords, and runtime model are original works
+designed from scratch by Percy Rojas Masgo (Condesi Perú / Qomni AI Lab)
+in 2025–2026.
+
+The following syntactic constructs are **unique to CRYS-L** and do not
+exist in any other language or DSL:
+
+| Construct | Example | Originality |
+|-----------|---------|-------------|
+| Plan declaration | `plan_pump_sizing(Q: f64) { }` | Original |
+| Named formula | `formula "HP": "Q*H/(eta*76)";` | Original |
+| Assert with message | `assert Q > 0.0 msg "flow must be positive";` | Original |
+| Annotated output | `output HP label "Required HP" unit "HP";` | Original |
+| Metadata block | `meta { standard: "NFPA 20:2022", ... }` | Original |
+
+No part of the grammar or syntax was copied or derived from any
+other language, DSL, library, or software project.
+
+---
+
+## Name
+
+**"CRYS-L"** (hyphenated) does not exist as a name for any other
+language, DSL, library, or software project.
+
+> **Important disambiguation:**
+> "CrySL" (no hyphen, different capitalization) is an unrelated academic DSL
+> for cryptographic API specification (ECOOP 2018, Fraunhofer / TU Darmstadt,
+> Mira Mezini et al.). It specifies correct usage of Java crypto APIs.
+> CRYS-L has **no relationship** to CrySL: different domain (engineering
+> calculations vs. Java security), different syntax, different purpose,
+> different implementation, different community.
+
+---
+
+## Code
+
+All code in this repository is original:
+
+- **stdlib/*.crysl** — original CRYS-L implementations by Percy Rojas Masgo.
+  Engineering formulas are mathematical laws in the public domain.
+  No code copied from any existing language, library, or framework.
+
+- **Compiler / WASM runtime** — original implementation. Not derived from
+  LLVM, GCC, or any other compiler infrastructure.
+
+- **examples/** — original annotated examples by Percy Rojas Masgo.
+
+---
+
+## Engineering Standards
+
+Standard references in this repo (NFPA 20, IEC 60364, ACI 318-19, IS.010,
+etc.) appear by **name and section number only**. This is consistent with
+academic citation practice. No text has been copied verbatim from any
+copyrighted standard document.
+
+The formulas themselves are mathematical/physical laws and are not subject
+to copyright protection.
+
+---
+
+## Copyright
+
+```
+Copyright (c) 2026 Percy Rojas Masgo — Condesi Perú / Qomni AI Lab
+All original content in this repository. MIT License.
+```
+
+CRYS-L is released as an open standard under MIT to benefit the global
+engineering and developer community. Attribution to Percy Rojas Masgo
+as the language creator is appreciated in derived works.

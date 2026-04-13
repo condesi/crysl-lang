@@ -1,0 +1,69 @@
+MIT License
+
+Copyright (c) 2026 Percy Rojas Masgo — Condesi Perú / Qomni AI Lab
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+ORIGINALITY STATEMENT:
+
+CRYS-L is an entirely original language created by Percy Rojas Masgo.
+
+1. LANGUAGE DESIGN — Original:
+   The CRYS-L grammar, syntax, and keyword set were designed from scratch
+   by Percy Rojas Masgo in 2025-2026. Key syntactic constructs that are
+   unique to CRYS-L and do not exist in any other language:
+     - plan_name(...) { } — plan declaration block
+     - formula "name": "expression" ; — named formula declaration
+     - assert expr msg "..." ; — assertion with inline message
+     - output id label "..." unit "..." ; — annotated output declaration
+     - meta { standard: "...", source: "...", domain: "..." } — metadata block
+   No part of the grammar or syntax was copied or derived from any
+   other language, DSL, or software project.
+
+2. NAME — Original:
+   "CRYS-L" (with hyphen) does not exist as a name for any other language,
+   DSL, library, or software project. Note: "CrySL" (no hyphen, different
+   capitalization) is an unrelated academic DSL for cryptographic API
+   specification (ECOOP 2018, Fraunhofer/TU Darmstadt) — different domain,
+   different syntax, different purpose. CRYS-L has no relationship to it.
+
+3. STANDARD LIBRARY CODE — Original:
+   All .crysl files in stdlib/ are original implementations by Percy Rojas Masgo.
+   Engineering formulas are mathematical laws in the public domain.
+   No code was copied from any existing language, framework, or library.
+   Standard references (NFPA, IEC, ACI, IS.010) appear by name and section
+   number only — no verbatim text copied from copyrighted standard documents.
+
+4. COMPILER AND RUNTIME — Original:
+   The CRYS-L compiler and WASM runtime are original implementations.
+   They were built specifically for this language and do not derive from
+   any existing compiler framework, LLVM IR, or third-party toolchain.
+
+5. CONTRIBUTIONS:
+   Pull Request contributors agree their work is original and submitted
+   under this same MIT License.
+
+---
+
+DISCLAIMER:
+This software is provided for engineering reference only. Always verify
+calculations against the applicable published standard before use in
+any professional, safety-critical, or regulatory context.

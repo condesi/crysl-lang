@@ -1,6 +1,10 @@
 // CRYS-L v2 Standard Library — Civil / Structural Engineering
+// Author:    Percy Rojas Masgo — Condesi Perú / Qomni AI Lab
+// Copyright: (c) 2026 Percy Rojas Masgo. CRYS-L language designed by Percy Rojas Masgo.
+// License:   MIT — github.com/condesi/crysl-lang
+// Note:      Formulas are mathematical laws (public domain). Implementations are original.
+//            Standards cited by name/section only — no text copied from copyrighted documents.
 // Standards: ACI 318-19, NTE E.060 Peru, IS.010 Peru
-// License: MIT — contribute at github.com/condesi/crysl-lang
 
 // ────────────────────────────────────────────────────────────────────────────
 // BEAM DEFLECTION — ACI 318 / NTE E.060

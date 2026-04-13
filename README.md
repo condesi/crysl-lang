@@ -1,5 +1,6 @@
 # CRYS-L v2 — Crystal Language
 
+**Created by Percy Rojas Masgo — Condesi Perú / Qomni AI Lab**
 **Open standard for deterministic engineering calculations.**
 MIT License · [Live Demo](https://qomni.clanmarketer.com/crysl/) · [Paper (PDF)](paper/main.tex)
 
@@ -213,12 +214,30 @@ crysl-lang/
 
 ---
 
+## Creator
+
+**CRYS-L was designed and created by Percy Rojas Masgo** (Condesi Perú / Qomni AI Lab) in 2025–2026.
+
+The language, grammar, compiler architecture, and standard library are original works.
+No content has been adapted or copied from third-party tools, languages, or libraries.
+
+Engineering formulas in the stdlib are mathematical laws in the public domain.
+Standards (NFPA, IEC, ACI, IS.010) are cited by name and section number only — consistent
+with academic reference practice. No text has been copied verbatim from any copyrighted
+standards document.
+
+---
+
 ## License
 
-**CRYS-L language spec, grammar, standard library, examples: MIT License**
+**Copyright (c) 2026 Percy Rojas Masgo — Condesi Perú / Qomni AI Lab**
+
+CRYS-L language spec, grammar, standard library, examples: **MIT License**
 
 The Qomni Engine runtime integration is proprietary.
 The language itself — grammar, stdlib plans, this repo — is fully open.
+
+See [LICENSE](LICENSE) for full terms and [ORIGINALITY.md](ORIGINALITY.md) for the complete originality statement.
 
 ---
 

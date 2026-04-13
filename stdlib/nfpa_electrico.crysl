@@ -1,6 +1,10 @@
 // CRYS-L v2 Standard Library — Fire Protection + Electrical
+// Author:    Percy Rojas Masgo — Condesi Perú / Qomni AI Lab
+// Copyright: (c) 2026 Percy Rojas Masgo. CRYS-L language designed by Percy Rojas Masgo.
+// License:   MIT — github.com/condesi/crysl-lang
+// Note:      Formulas are mathematical laws (public domain). Implementations are original.
+//            Standards cited by name/section only — no text copied from copyrighted documents.
 // Standards: NFPA 13/20/72, IEC 60364, NEC 2023
-// License: MIT — contribute at github.com/condesi/crysl-lang
 
 // ────────────────────────────────────────────────────────────────────────────
 // FIRE PUMP SIZING — NFPA 20

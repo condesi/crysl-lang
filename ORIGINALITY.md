@@ -41,13 +41,50 @@ language, DSL, library, or software project.
 
 ---
 
-## Code
+## Code Independence — CRYS-L Does Not Use Code from Other Languages
+
+CRYS-L is a self-contained language. It does **not** use, embed, or execute
+code written in any other programming language. Specifically:
+
+- **No Rust code inside .crysl files.** CRYS-L is not a macro system or
+  extension of Rust, Python, C, or any other language.
+- **No Python, JavaScript, or shell code embedded.** CRYS-L plans are
+  evaluated by the CRYS-L runtime only.
+- **No third-party compiler framework used.** The CRYS-L JIT compiler and
+  WASM runtime are original — not based on LLVM, GCC, Cranelift, or any
+  existing compiler backend.
+- **No code borrowed from other DSLs.** The `.crysl` plan format was designed
+  independently; it does not reuse parsers, grammars, or AST definitions from
+  any other tool.
+
+### On common keywords (`let`, `const`, `f64`)
+
+CRYS-L uses a small set of generic keywords common to many languages:
+`let`, `const`. These are universal programming concepts, not owned or
+copyrighted by any language. The type name `f64` (64-bit float) is a
+mathematical/hardware concept — it is not code from Rust or any other language.
+
+No source code from Rust, Python, JavaScript, C, or any other language
+was copied, adapted, or used to create CRYS-L or its standard library.
+
+### What is entirely original in CRYS-L
+
+| Element | Status |
+|---------|--------|
+| `plan_name(...) { }` block | **Original — unique to CRYS-L** |
+| `formula "name": "expr" ;` | **Original — unique to CRYS-L** |
+| `assert expr msg "text" ;` | **Original — unique to CRYS-L** |
+| `output id label "..." unit "..." ;` | **Original — unique to CRYS-L** |
+| `meta { standard: ..., source: ..., domain: ... }` | **Original — unique to CRYS-L** |
+| CRYS-L grammar (EBNF) | **Original — designed by Percy Rojas Masgo** |
+| CRYS-L JIT compiler | **Original — no third-party compiler framework** |
+| CRYS-L WASM runtime | **Original — no third-party runtime used** |
+| stdlib `.crysl` plans | **Original — CRYS-L code only** |
 
 All code in this repository is original:
 
 - **stdlib/*.crysl** — original CRYS-L implementations by Percy Rojas Masgo.
   Engineering formulas are mathematical laws in the public domain.
-  No code copied from any existing language, library, or framework.
 
 - **Compiler / WASM runtime** — original implementation. Not derived from
   LLVM, GCC, or any other compiler infrastructure.

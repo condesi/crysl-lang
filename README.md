@@ -25,7 +25,7 @@ plan_pump_sizing(500, 80, 0.75)
 
 ## Why CRYS-L?
 
-| Question | LLM (GPT-4, Claude) | CRYS-L |
+| Question | LLM (GPT-4 / commercial API) | CRYS-L |
 |----------|-------------------|--------|
 | "500 gpm pump at 80 psi, 75% eff — how many HP?" | ~15 HP (±15% error) | **13.26 HP** (exact) |
 | Standard cited? | No | NFPA 20:2022 §4.26 |
@@ -129,7 +129,7 @@ Overall average                                          | 153ms
 
 **vs LLM:**
 - GPT-4 Turbo: 2,800–8,500ms (18–56× slower)
-- Claude 3.5 Sonnet: 2,200–7,000ms (14–46× slower)
+- Commercial LLM API: 2,200–7,000ms (14–46× slower)
 - Local LLM 1.5B: 8,000–45,000ms (52–294× slower)
 
 ---

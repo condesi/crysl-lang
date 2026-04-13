@@ -55,7 +55,7 @@ We show that CRYS-L achieves \textbf{53--286~ms end-to-end latency} for
 complex domain calculations on commodity hardware, compared to
 \textbf{4,000--45,000~ms} for LLM inference (a \textbf{15--850×} speedup),
 while producing \textbf{exact, standard-referenced} results rather than
-probabilistic approximations. We compare against GPT-4 Turbo, Claude 3.5 Sonnet,
+probabilistic approximations. We compare against GPT-4 Turbo, a second commercial LLM API,
 Python/SciPy scripts, Excel formulas, and commercial engineering software.
 
 CRYS-L v2 is released as an open standard under MIT license. The language
@@ -345,7 +345,7 @@ Symbolic Engine (Qomni) & 49 & 61 & Simple arithmetic plans \\
 Python + SciPy (local) & 80 & 300 & Script launch overhead \\
 Excel (local formula) & 50 & 200 & Manual data entry \\
 GPT-4 Turbo (API) & 2,800 & 8,500 & OpenAI API, March 2026 \\
-Claude 3.5 Sonnet (API) & 2,200 & 7,000 & Anthropic API, March 2026 \\
+LLM B (API) & 2,200 & 7,000 & Commercial API, March 2026 \\
 Local LLM 1.5B (Qomni) & 8,000 & 45,000 & qwen2.5-1.5b-instruct-q4 \\
 \bottomrule
 \end{tabular}
@@ -385,7 +385,7 @@ Approach & Answer & Exact? & Standard cited? & Reproducible? \\
 \midrule
 \textbf{CRYS-L JIT} & \textbf{13.26 HP} & \textbf{Yes} & \textbf{NFPA 20:2022 §4.26} & \textbf{Yes} \\
 GPT-4 Turbo & ``about 15 HP'' & No ($\pm$15\%) & No & No \\
-Claude 3.5 Sonnet & ``13-14 HP'' & Partial & No & No \\
+LLM B (API) & ``13-14 HP'' & Partial & No & No \\
 Python (manual) & 13.26 HP & Yes & Manual & Yes \\
 Excel (manual) & 13.26 HP & Yes & Manual & Yes \\
 Local LLM 1.5B & ``12-18 HP'' & No ($\pm$25\%) & No & No \\
@@ -407,7 +407,7 @@ does so without manual setup and with standard citation.
 \caption{Qualitative comparison across tools}
 \begin{tabular}{lcccccc}
 \toprule
-& CRYS-L & GPT-4 & Claude & Python & Excel & Eng.~SW \\
+& CRYS-L & GPT-4 & LLM-B & Python & Excel & Eng.~SW \\
 \midrule
 Exact answer & \checkmark & $\times$ & $\times$ & \checkmark & \checkmark & \checkmark \\
 Standard cited & \checkmark & $\times$ & $\times$ & Manual & Manual & \checkmark \\

@@ -3,7 +3,7 @@
   "date": "2026-04-13",
   "server": "Server5 (AMD EPYC 12-core, 48GB RAM, 500GB NVMe)",
   "method": "5 runs each, mean reported",
-  "note": "CRYS-L times include HTTP request + JSON parsing + WASM execute + format. LLM times include full inference (GPT-4o / Claude Sonnet observed).",
+  "note": "CRYS-L times include HTTP request + JSON parsing + WASM execute + format. LLM times include full inference (GPT-4o and commercial LLM API observed).",
 
   "crysl_plans": [
     {

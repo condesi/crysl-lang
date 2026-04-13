@@ -1,0 +1,120 @@
+// CRYS-L v2 Standard Library — Hydraulics
+// Standard: IS.010 Peru / IS.020 / AWWA M22 / Darcy-Weisbach
+// License: MIT — contribute at github.com/condesi/crysl-lang
+
+// ────────────────────────────────────────────────────────────────────────────
+// HAZEN-WILLIAMS
+// ────────────────────────────────────────────────────────────────────────────
+
+plan_hazen_williams(
+    Q: f64,           // flow rate (L/s)
+    D: f64,           // internal diameter (mm)
+    C: f64 = 120.0,   // roughness: PVC=140, steel=120, cast iron=100, AC=140
+    L: f64            // pipe length (m)
+) {
+    meta {
+        standard: "Hazen-Williams (SI units)",
+        source: "IS.010 Peru §2.4 / AWWA M22 / RNE OS.050",
+        domain: "hidraulica",
+        version: "2.0",
+        accuracy: "±2% vs Darcy-Weisbach for turbulent flow Re > 4000",
+    }
+
+    const PI = 3.14159265358979;
+    let A = PI * pow(D / 1000.0, 2.0) / 4.0;       // cross-sectional area (m²)
+    let V = Q / (1000.0 * A);                         // velocity (m/s)
+    let R = (D / 1000.0) / 4.0;                       // hydraulic radius (m)
+    let S = pow(V / (0.8492 * C * pow(R, 0.63)), 1.0 / 0.54);  // slope (m/m)
+    let h_f = S * L;                                   // head loss (m)
+    let Re = V * (D / 1000.0) / 0.000001;             // Reynolds number (water 20°C)
+    let Q_max = 1000.0 * A * 3.0;                     // max flow at v=3m/s (L/s)
+
+    formula "Hazen-Williams velocity (SI)": "V = 0.8492 · C · R^0.63 · S^0.54";
+    formula "Head loss": "h_f = S · L";
+    formula "Reynolds": "Re = V · D / ν, ν = 10⁻⁶ m²/s";
+
+    assert Q > 0.0   msg "flow rate must be positive (L/s)";
+    assert D > 0.0   msg "diameter must be positive (mm)";
+    assert D < 5000.0 msg "diameter exceeds 5000mm — check units";
+    assert C > 0.0   msg "roughness coefficient must be positive";
+    assert L > 0.0   msg "pipe length must be positive (m)";
+    assert V < 5.0   msg "velocity exceeds 5 m/s — risk of water hammer";
+
+    output V      label "Flow velocity"        unit "m/s";
+    output h_f    label "Head loss"            unit "m";
+    output A      label "Pipe cross-section"   unit "m²";
+    output S      label "Hydraulic slope"      unit "m/m";
+    output Re     label "Reynolds number"      unit "-";
+    output Q_max  label "Max flow (v=3m/s)"   unit "L/s";
+}
+
+
+// ────────────────────────────────────────────────────────────────────────────
+// DARCY-WEISBACH
+// ────────────────────────────────────────────────────────────────────────────
+
+plan_darcy_weisbach(
+    Q: f64,            // flow rate (L/s)
+    D: f64,            // internal diameter (mm)
+    f: f64 = 0.02,     // Darcy friction factor (smooth pipe ~0.015, rough ~0.03)
+    L: f64             // pipe length (m)
+) {
+    meta {
+        standard: "Darcy-Weisbach",
+        source: "ISO 4006:2017 / ASHRAE Handbook Fundamentals",
+        domain: "hidraulica",
+        version: "2.0",
+        note: "More accurate than Hazen-Williams for all flow regimes",
+    }
+
+    const g = 9.81;
+    const PI = 3.14159265358979;
+    let A = PI * pow(D / 1000.0, 2.0) / 4.0;
+    let V = Q / (1000.0 * A);
+    let h_f = f * (L / (D / 1000.0)) * (pow(V, 2.0) / (2.0 * g));
+    let Re = V * (D / 1000.0) / 0.000001;
+
+    formula "Darcy-Weisbach": "h_f = f · (L/D) · V²/(2g)";
+    formula "Reynolds": "Re = V·D/ν";
+
+    assert Q > 0.0    msg "flow rate must be positive";
+    assert D > 0.0    msg "diameter must be positive";
+    assert f > 0.005  msg "friction factor too low — minimum 0.005";
+    assert f < 0.10   msg "friction factor too high — check pipe roughness";
+    assert L > 0.0    msg "length must be positive";
+
+    output V    label "Velocity"        unit "m/s";
+    output h_f  label "Head loss"       unit "m";
+    output Re   label "Reynolds number" unit "-";
+}
+
+
+// ────────────────────────────────────────────────────────────────────────────
+// PIPE SIZING
+// ────────────────────────────────────────────────────────────────────────────
+
+plan_pipe_sizing(
+    Q: f64,             // design flow (L/s)
+    v_max: f64 = 2.5    // max allowable velocity (m/s) — IS.010: 2.5 cold, 3.0 hot
+) {
+    meta {
+        standard: "IS.010 Peru §2.4.3",
+        source: "RNE OS.050 / AWWA C901",
+        domain: "hidraulica",
+        version: "2.0",
+    }
+
+    const PI = 3.14159265358979;
+    let A_min = Q / (1000.0 * v_max);
+    let D_min = 1000.0 * sqrt(4.0 * A_min / PI);
+
+    formula "Min area": "A = Q / v_max";
+    formula "Min diameter": "D = sqrt(4A/π)";
+
+    assert Q > 0.0      msg "flow must be positive";
+    assert v_max > 0.0  msg "velocity must be positive";
+    assert v_max <= 5.0 msg "max velocity exceeds 5 m/s — risk of erosion";
+
+    output D_min label "Minimum pipe diameter"  unit "mm";
+    output A_min label "Minimum pipe area"      unit "m²";
+}

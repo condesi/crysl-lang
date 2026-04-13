@@ -1,0 +1,143 @@
+// CRYS-L v2 Standard Library — Civil / Structural Engineering
+// Standards: ACI 318-19, NTE E.060 Peru, IS.010 Peru
+// License: MIT — contribute at github.com/condesi/crysl-lang
+
+// ────────────────────────────────────────────────────────────────────────────
+// BEAM DEFLECTION — ACI 318 / NTE E.060
+// ────────────────────────────────────────────────────────────────────────────
+
+plan_beam_deflection(
+    w:   f64,          // uniform load (kN/m)
+    L:   f64,          // beam span (m)
+    E:   f64,          // elastic modulus (GPa): concrete=25, steel=200
+    I:   f64           // moment of inertia (cm⁴)
+) {
+    meta {
+        standard: "ACI 318-19 — Building Code Requirements for Structural Concrete",
+        source: "ACI 318-19 Table 24.2.2, NTE E.060 Peru §9.5",
+        domain: "civil",
+        version: "2.0",
+    }
+
+    const GPa_TO_kN_m2 = 1000000.0;   // 1 GPa = 1,000,000 kN/m²
+    const CM4_TO_M4    = 0.00000001;   // 1 cm⁴ = 1e-8 m⁴
+
+    let E_kN    = E * GPa_TO_kN_m2;
+    let I_m4    = I * CM4_TO_M4;
+    let EI      = E_kN * I_m4;
+
+    // Simply supported beam, uniform load: δ = 5wL⁴ / (384EI)
+    let delta   = (5.0 * w * pow(L, 4.0)) / (384.0 * EI);
+
+    // ACI limit: L/360 for live load deflection
+    let delta_allow = L / 360.0;
+
+    // Midspan moment
+    let M_max   = (w * L * L) / 8.0;
+
+    formula "Midspan deflection": "δ = 5·w·L⁴ / (384·E·I)";
+    formula "ACI deflection limit": "δ_allow = L / 360";
+    formula "Midspan moment": "M = w·L² / 8";
+
+    assert w > 0.0   msg "load must be positive (kN/m)";
+    assert L > 0.0   msg "span must be positive (m)";
+    assert E > 0.0   msg "elastic modulus must be positive (GPa)";
+    assert I > 0.0   msg "moment of inertia must be positive (cm⁴)";
+    assert L <= 30.0 msg "span exceeds 30m — verify beam type and supports";
+
+    output delta        label "Midspan deflection"     unit "m";
+    output delta_allow  label "ACI allow deflection"   unit "m";
+    output M_max        label "Midspan moment"         unit "kN·m";
+    output EI           label "Flexural stiffness EI"  unit "kN·m²";
+}
+
+
+// ────────────────────────────────────────────────────────────────────────────
+// COLUMN AXIAL LOAD CAPACITY — ACI 318 / NTE E.060
+// ────────────────────────────────────────────────────────────────────────────
+
+plan_column_capacity(
+    b:    f64,          // column width (mm)
+    h:    f64,          // column depth (mm)
+    fc:   f64,          // concrete compressive strength (MPa): typ 21, 28
+    fy:   f64 = 420.0,  // steel yield strength (MPa)
+    rho:  f64 = 0.02    // steel ratio (0.01–0.08, ACI §10.6.1.1)
+) {
+    meta {
+        standard: "ACI 318-19 — Building Code Requirements for Structural Concrete",
+        source: "ACI 318-19 §22.4.2, NTE E.060 Peru §10.3.5",
+        domain: "civil",
+        version: "2.0",
+    }
+
+    let Ag     = b * h;                        // gross area (mm²)
+    let Ast    = rho * Ag;                     // steel area (mm²)
+    let Ac     = Ag - Ast;                     // net concrete area (mm²)
+
+    // ACI 318 §22.4.2.1: Pn = 0.85·f'c·Ac + fy·Ast
+    let Pn     = 0.85 * fc * Ac + fy * Ast;   // nominal capacity (N)
+    let Pn_kN  = Pn / 1000.0;
+
+    // ACI φ factor for tied columns
+    let phi    = 0.65;
+    let Pu_kN  = phi * Pn_kN;
+
+    formula "Column capacity": "Pn = 0.85·f'c·Ac + fy·Ast";
+    formula "Design strength": "φPn = 0.65 × Pn (tied column)";
+
+    assert b > 0.0    msg "width must be positive (mm)";
+    assert h > 0.0    msg "depth must be positive (mm)";
+    assert fc >= 17.0 msg "f'c must be ≥ 17 MPa (NTE E.060 min)";
+    assert fc <= 70.0 msg "f'c exceeds 70 MPa — high-strength concrete rules apply";
+    assert rho >= 0.01 msg "steel ratio must be ≥ 1% (ACI §10.6.1.1)";
+    assert rho <= 0.08 msg "steel ratio must be ≤ 8% (ACI §10.6.1.1)";
+
+    output Pn_kN   label "Nominal capacity Pn"   unit "kN";
+    output Pu_kN   label "Design capacity φPn"   unit "kN";
+    output Ag      label "Gross area Ag"          unit "mm²";
+    output Ast     label "Steel area Ast"         unit "mm²";
+}
+
+
+// ────────────────────────────────────────────────────────────────────────────
+// FOOTING BEARING PRESSURE — NTE E.050 Peru
+// ────────────────────────────────────────────────────────────────────────────
+
+plan_footing_bearing(
+    P_kN:  f64,         // column axial load (kN)
+    qa:    f64,         // allowable bearing pressure (kN/m²): typ 100-300
+    ratio: f64 = 1.0    // footing aspect ratio B/L (1.0 = square)
+) {
+    meta {
+        standard: "NTE E.050 — Suelos y Cimentaciones (Peru)\",",
+        source: "NTE E.050:2018 §15, ACI 318-19 §13.3",
+        domain: "civil",
+        version: "2.0",
+    }
+
+    // Required area A = P / qa (with 10% self-weight allowance)
+    let P_total = P_kN * 1.10;
+    let A_req   = P_total / qa;
+
+    // Footing dimensions B×L where B = ratio × L → A = ratio × L²
+    let L       = sqrt(A_req / ratio);
+    let B       = ratio * L;
+
+    // Actual bearing pressure
+    let q_actual = P_total / (B * L);
+
+    formula "Required area": "A = P × 1.10 / qa";
+    formula "Footing length": "L = sqrt(A / ratio)";
+    formula "Bearing pressure": "q = P_total / (B × L)";
+
+    assert P_kN  > 0.0   msg "load must be positive (kN)";
+    assert qa    > 0.0   msg "allowable pressure must be positive (kN/m²)";
+    assert ratio > 0.0   msg "aspect ratio must be positive";
+    assert ratio <= 3.0  msg "aspect ratio B/L should not exceed 3.0";
+    assert qa    <= 600.0 msg "bearing pressure exceeds 600 kN/m² — verify soil report";
+
+    output A_req    label "Required footing area"  unit "m²";
+    output B        label "Footing width B"        unit "m";
+    output L        label "Footing length L"       unit "m";
+    output q_actual label "Actual bearing pressure" unit "kN/m²";
+}

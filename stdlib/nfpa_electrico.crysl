@@ -1,0 +1,154 @@
+// CRYS-L v2 Standard Library — Fire Protection + Electrical
+// Standards: NFPA 13/20/72, IEC 60364, NEC 2023
+// License: MIT — contribute at github.com/condesi/crysl-lang
+
+// ────────────────────────────────────────────────────────────────────────────
+// FIRE PUMP SIZING — NFPA 20
+// ────────────────────────────────────────────────────────────────────────────
+
+plan_pump_sizing(
+    Q_gpm: f64,          // required flow (GPM)
+    P_psi: f64,          // required pressure (PSI)
+    eff:   f64 = 0.70    // pump efficiency (0.0–1.0)
+) {
+    meta {
+        standard: "NFPA 20:2022 — Standard for the Installation of Stationary Pumps",
+        source: "Section 4.26, Chapter 6, Annex A",
+        domain: "nfpa_electrico",
+        version: "2.0",
+    }
+
+    const GPM_TO_LPS = 0.06309;
+    const PSI_TO_M   = 0.70307;
+
+    let Q_lps    = Q_gpm  * GPM_TO_LPS;
+    let H_m      = P_psi  * PSI_TO_M;
+    let HP_req   = (Q_lps * H_m) / (eff * 76.04);
+    let HP_max   = HP_req * 1.20;      // NFPA 20 §6.7: shutoff ≤ 140% rated HP
+    let kW_motor = HP_req * 0.7457;    // motor kW
+
+    formula "Pump power": "HP = (Q[L/s] × H[m]) / (η × 76.04)";
+    formula "NFPA shutoff": "HP_shutoff ≤ 1.40 × HP_rated";
+
+    assert Q_gpm > 0.0   msg "flow must be positive (GPM)";
+    assert P_psi > 0.0   msg "pressure must be positive (PSI)";
+    assert eff   > 0.0   msg "efficiency must be > 0";
+    assert eff   <= 1.0  msg "efficiency must be ≤ 1.0";
+    assert Q_gpm <= 5000.0 msg "flow exceeds 5000 GPM — verify NFPA 20 Table 4.26";
+
+    output HP_req    label "Required HP"              unit "HP";
+    output HP_max    label "Max shutoff HP (NFPA 20)" unit "HP";
+    output kW_motor  label "Motor power"              unit "kW";
+    output Q_lps     label "Flow rate"                unit "L/s";
+    output H_m       label "Total Dynamic Head"       unit "m";
+}
+
+
+// ────────────────────────────────────────────────────────────────────────────
+// VOLTAGE DROP — IEC 60364 / NEC
+// ────────────────────────────────────────────────────────────────────────────
+
+plan_voltage_drop(
+    P_kw:  f64,           // load power (kW)
+    V:     f64,           // nominal voltage (V): 220, 380, 440, 480
+    L:     f64,           // cable run ONE-WAY (m)
+    fp:    f64 = 0.90,    // power factor (0–1)
+    rho:   f64 = 0.0175   // resistivity Ω·mm²/m: copper=0.0175, aluminium=0.028
+) {
+    meta {
+        standard: "IEC 60364-5-52:2009 — Electrical Installations",
+        source: "NEC 2023 Article 210.19, IEC 60364 §523",
+        domain: "nfpa_electrico",
+        version: "2.0",
+    }
+
+    let I        = (P_kw * 1000.0) / (V * fp);
+    let I_design = I * 1.25;            // NEC: 125% for continuous loads
+    let S_min    = (2.0 * rho * L * I) / (V * 0.03);  // 3% drop limit
+    let dV       = (2.0 * rho * L * I) / S_min;
+    let drop_pct = (dV / V) * 100.0;
+    let P_loss   = dV * I;              // power loss in cable (W)
+
+    formula "Nominal current": "I = P / (V × fp)";
+    formula "Min section (3% drop)": "S = 2·ρ·L·I / (V × 0.03)";
+    formula "Voltage drop": "ΔV = 2·ρ·L·I / S";
+
+    assert P_kw  > 0.0   msg "power must be positive (kW)";
+    assert V     > 0.0   msg "voltage must be positive (V)";
+    assert L     > 0.0   msg "cable length must be positive (m)";
+    assert fp    > 0.0   msg "power factor must be > 0";
+    assert fp    <= 1.0  msg "power factor must be ≤ 1.0";
+    assert rho   > 0.0   msg "resistivity must be positive";
+
+    output I        label "Nominal current"           unit "A";
+    output I_design label "Design current (NEC 125%)" unit "A";
+    output S_min    label "Min cable section (3%drop)" unit "mm²";
+    output dV       label "Voltage drop"               unit "V";
+    output drop_pct label "Drop percentage"            unit "%";
+    output P_loss   label "Cable power loss"           unit "W";
+}
+
+
+// ────────────────────────────────────────────────────────────────────────────
+// TRANSFORMER SIZING — IEC 60076
+// ────────────────────────────────────────────────────────────────────────────
+
+plan_transformer_sizing(
+    P_kw:  f64,           // total connected load (kW)
+    fp:    f64 = 0.85,    // weighted average power factor
+    fu:    f64 = 0.80     // demand/utilization factor
+) {
+    meta {
+        standard: "IEC 60076-1:2011 — Power Transformers",
+        source: "IEC 60076-1:2011 §4, NFPA 70E",
+        domain: "nfpa_electrico",
+        version: "2.0",
+        note: "Commercial standard sizes: 10,25,37.5,50,75,100,167,250,333,500,750,1000 kVA",
+    }
+
+    let S_required = (P_kw * fu) / fp;    // apparent power (kVA)
+    let S_design   = S_required * 1.15;   // 15% growth margin
+
+    formula "Apparent power": "S[kVA] = P[kW] × fu / fp";
+    formula "Design kVA": "S_design = S × 1.15 (15% margin)";
+
+    assert P_kw > 0.0  msg "load must be positive (kW)";
+    assert fp   > 0.0  msg "power factor must be > 0";
+    assert fp   <= 1.0 msg "power factor must be ≤ 1.0";
+    assert fu   > 0.0  msg "utilization factor must be > 0";
+    assert fu   <= 1.0 msg "utilization factor must be ≤ 1.0";
+
+    output S_required label "Required kVA"      unit "kVA";
+    output S_design   label "Design kVA (+15%)" unit "kVA";
+}
+
+
+// ────────────────────────────────────────────────────────────────────────────
+// SPRINKLER WATER DEMAND — NFPA 13
+// ────────────────────────────────────────────────────────────────────────────
+
+plan_sprinkler_demand(
+    area_m2:     f64,          // design area (m²)
+    density_lpm: f64 = 4.07    // density L/min/m² (light=4.07, ord=8.14)
+) {
+    meta {
+        standard: "NFPA 13:2022 — Installation of Sprinkler Systems",
+        source: "Table 19.3.3.1.1 — density/area method",
+        domain: "nfpa_electrico",
+        version: "2.0",
+    }
+
+    let Q_lpm  = area_m2 * density_lpm;          // total flow (L/min)
+    let Q_lps  = Q_lpm / 60.0;                    // flow (L/s)
+    let Q_gpm  = Q_lps / 0.06309;                 // flow (GPM)
+
+    formula "Sprinkler demand": "Q = Area × Density";
+
+    assert area_m2 > 0.0       msg "design area must be positive";
+    assert density_lpm > 0.0   msg "density must be positive";
+    assert area_m2 <= 465.0    msg "area exceeds NFPA 13 max 465 m²";
+
+    output Q_lpm  label "Total flow"   unit "L/min";
+    output Q_lps  label "Total flow"   unit "L/s";
+    output Q_gpm  label "Total flow"   unit "GPM";
+}

@@ -1,0 +1,96 @@
+// CRYS-L v2 — Quick Start Examples
+// These are annotated minimal examples for new contributors.
+// License: MIT — contribute at github.com/condesi/crysl-lang
+
+// ────────────────────────────────────────────────────────────────────────────
+// EXAMPLE 1: Minimal plan (required fields only)
+// ────────────────────────────────────────────────────────────────────────────
+
+plan_pipe_area(
+    D_mm: f64    // pipe internal diameter (mm)
+) {
+    meta {
+        standard: "IS.010 Peru — Instalaciones Sanitarias",
+        source: "IS.010:2006 §3",
+        domain: "hidraulica",
+        version: "2.0",
+    }
+
+    // Step 1: compute
+    let D_m  = D_mm / 1000.0;
+    let area = 3.14159 * pow(D_m, 2.0) / 4.0;
+
+    // Step 2: validate input
+    assert D_mm > 0.0   msg "diameter must be positive";
+    assert D_mm <= 2000.0 msg "diameter exceeds 2000 mm — check input";
+
+    // Step 3: declare output(s)
+    output area  label "Cross-sectional area"  unit "m²";
+}
+
+
+// ────────────────────────────────────────────────────────────────────────────
+// EXAMPLE 2: Multiple outputs + formula declarations
+// ────────────────────────────────────────────────────────────────────────────
+
+plan_ohms_law(
+    V:   f64,           // voltage (V)
+    R:   f64            // resistance (Ω)
+) {
+    meta {
+        standard: "IEC 60050-131 — Electrotechnics",
+        source: "IEC 60050-131:2002 §131-11-26",
+        domain: "nfpa_electrico",
+        version: "2.0",
+    }
+
+    let I  = V / R;              // current (A)
+    let P  = V * I;              // power (W)
+    let P2 = pow(I, 2.0) * R;   // alternate power formula
+
+    formula "Current": "I = V / R";
+    formula "Power (VI)": "P = V × I";
+    formula "Power (I²R)": "P = I² × R";
+
+    assert V > 0.0  msg "voltage must be positive";
+    assert R > 0.0  msg "resistance must be positive";
+
+    output I   label "Current"              unit "A";
+    output P   label "Power (dissipated)"   unit "W";
+}
+
+
+// ────────────────────────────────────────────────────────────────────────────
+// EXAMPLE 3: Default parameters + constants
+// ────────────────────────────────────────────────────────────────────────────
+
+plan_tank_fill_time(
+    V_m3:    f64,           // tank volume (m³)
+    Q_lps:   f64,           // fill flow rate (L/s)
+    reserve: f64 = 0.10     // reserve margin (10% default)
+) {
+    meta {
+        standard: "IS.010 Peru — Instalaciones Sanitarias",
+        source: "IS.010:2006 §4.3 — Almacenamiento de agua",
+        domain: "sanitaria",
+        version: "2.0",
+    }
+
+    const L_TO_M3 = 0.001;
+
+    let Q_m3s     = Q_lps * L_TO_M3;
+    let V_design  = V_m3 * (1.0 + reserve);
+    let t_min     = (V_design / Q_m3s) / 60.0;   // fill time (minutes)
+    let t_hr      = t_min / 60.0;                 // fill time (hours)
+
+    formula "Fill time": "t = V_design / Q";
+
+    assert V_m3  > 0.0   msg "volume must be positive";
+    assert Q_lps > 0.0   msg "flow rate must be positive";
+    assert reserve >= 0.0 msg "reserve margin must be ≥ 0";
+    assert reserve <= 0.5 msg "reserve margin should not exceed 50%";
+
+    output t_min    label "Fill time"          unit "min";
+    output t_hr     label "Fill time"          unit "hr";
+    output V_design label "Design volume"      unit "m³";
+}

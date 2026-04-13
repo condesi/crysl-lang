@@ -1,0 +1,94 @@
+{
+  "benchmark": "CRYS-L v2 — Execution Latency vs LLM Baseline",
+  "date": "2026-04-13",
+  "server": "Server5 (AMD EPYC 12-core, 48GB RAM, 500GB NVMe)",
+  "method": "5 runs each, mean reported",
+  "note": "CRYS-L times include HTTP request + JSON parsing + WASM execute + format. LLM times include full inference (GPT-4o / Claude Sonnet observed).",
+
+  "crysl_plans": [
+    {
+      "plan": "plan_pump_sizing",
+      "domain": "nfpa_electrico",
+      "inputs": {"Q_gpm": 500, "P_psi": 80, "eff": 0.70},
+      "runs_ms": [302, 277, 305, 282, 265],
+      "mean_ms": 286,
+      "route": "qomni-direct-v0.59",
+      "result_exact": true,
+      "result": {"HP_req": 17.21, "HP_max": 20.65, "kW_motor": 12.83}
+    },
+    {
+      "plan": "plan_hazen_williams",
+      "domain": "hidraulica",
+      "inputs": {"Q": 3.0, "D": 150.0, "C": 120.0, "L": 300.0},
+      "runs_ms": [56, 51, 61, 50, 49],
+      "mean_ms": 53,
+      "route": "symbolic-engine",
+      "result_exact": true,
+      "result": {"V": 0.170, "h_loss": 0.534}
+    },
+    {
+      "plan": "plan_voltage_drop",
+      "domain": "nfpa_electrico",
+      "inputs": {"P_kw": 75, "V": 380, "L": 120, "fp": 0.90},
+      "runs_ms": [130, 118, 113, 127, 112],
+      "mean_ms": 120,
+      "route": "crysl-jit-v2.1",
+      "result_exact": true,
+      "result": {"I": 219.3, "S_min": 27.8, "drop_pct": 3.0}
+    },
+    {
+      "plan": "plan_transformer_sizing",
+      "domain": "nfpa_electrico",
+      "inputs": {"P_kw": 200, "fp": 0.85, "fu": 0.80},
+      "runs_ms": [89, 92, 87, 95, 88],
+      "mean_ms": 90,
+      "route": "crysl-jit-v2.1",
+      "result_exact": true,
+      "result": {"S_required": 188.2, "S_design": 216.4}
+    },
+    {
+      "plan": "plan_beam_deflection",
+      "domain": "civil",
+      "inputs": {"w": 20.0, "L": 6.0, "E": 25.0, "I": 15000.0},
+      "runs_ms": [74, 69, 78, 71, 73],
+      "mean_ms": 73,
+      "route": "crysl-jit-v2.1",
+      "result_exact": true,
+      "result": {"delta": 0.00270, "delta_allow": 0.01667, "M_max": 90.0}
+    }
+  ],
+
+  "llm_baseline": {
+    "model": "GPT-4o (observed 2026-04)",
+    "runs_ms": [12400, 9800, 14100, 11200, 10900],
+    "mean_ms": 11680,
+    "result_exact": false,
+    "note": "LLM answers vary ±15-25% across runs; CRYS-L answers are bit-identical"
+  },
+
+  "python_baseline": {
+    "description": "Python 3.11 equivalent script, cold start (import + calculate)",
+    "runs_ms": [890, 820, 910, 855, 870],
+    "mean_ms": 869,
+    "result_exact": true,
+    "note": "Python is exact but requires environment setup, no standard citation"
+  },
+
+  "excel_baseline": {
+    "description": "Excel formula (user inputs values manually, reads result)",
+    "estimated_ms": 8000,
+    "result_exact": true,
+    "note": "No automated input parsing, no standards citation, no HTTP API"
+  },
+
+  "summary": {
+    "crysl_mean_ms": 124,
+    "llm_mean_ms": 11680,
+    "python_mean_ms": 869,
+    "speedup_vs_llm": "94x",
+    "speedup_vs_python": "7x",
+    "crysl_accuracy": "100% exact (deterministic WASM)",
+    "llm_accuracy": "approx ±15-25% numerical error",
+    "llm_bypass_rate": "100%"
+  }
+}

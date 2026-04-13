@@ -90,6 +90,13 @@ plan_pump_sizing(
 
 ## Standard Library (v2)
 
+> **CRYS-L is not limited to any domain.**
+> The six domains below are the initial stdlib — engineering starting points.
+> Any deterministic calculation in any field can be expressed as a CRYS-L plan:
+> structural, geotechnical, chemical, financial, legal, medical dosage, physics,
+> thermodynamics, acoustics, fluid dynamics, environmental, astronomical — unlimited.
+> If a formula can be written, it can be a CRYS-L plan.
+
 ### Hydraulics (IS.010 Peru / AWWA)
 
 | Plan | Formula | Standard |
@@ -113,6 +120,44 @@ plan_pump_sizing(
 | `plan_voltage_drop(P_kw, V, L, fp, rho)` | ΔV = 2ρLI/S | IEC 60364-5-52 |
 | `plan_transformer_sizing(P_kw, fp, fu)` | S = P·fu/fp | IEC 60076-1 |
 | `plan_cable_sizing(I, method)` | S from NEC tables | NEC Article 310 |
+
+### Civil / Structural (ACI / NTE E.060)
+
+| Plan | Formula | Standard |
+|------|---------|---------|
+| `plan_beam_deflection(w, L, E, I)` | δ = 5·w·L⁴/(384·E·I) | ACI 318-19 §24.2 |
+| `plan_column_capacity(b, h, fc, fy, rho)` | Pn = 0.85·f'c·Ac + fy·Ast | ACI 318-19 §22.4 |
+| `plan_footing_bearing(P_kN, qa, ratio)` | A = P·1.10/qa | NTE E.050 Peru |
+
+### Mechanical (ISO / ASME)
+
+| Plan | Formula | Standard |
+|------|---------|---------|
+| `plan_shaft_power(T, rpm)` | P = T·ω | ISO 14691 |
+| `plan_gear_ratio(N1, N2, T_in)` | T_out = T_in·(N2/N1) | AGMA 2001 |
+
+### Thermal (ASHRAE / ISO)
+
+| Plan | Formula | Standard |
+|------|---------|---------|
+| `plan_hvac_load(area, delta_T, U)` | Q = U·A·ΔT | ASHRAE 90.1 |
+| `plan_heat_transfer(k, A, L, delta_T)` | Q = k·A·ΔT/L | ISO 6946 |
+
+### Sanitary / Water Supply (IS.010 Peru)
+
+| Plan | Formula | Standard |
+|------|---------|---------|
+| `plan_water_demand(units, type)` | Q_daily from fixture units | IS.010 Peru |
+| `plan_tank_sizing(Q_daily, hours)` | V = Q·t | IS.010 Peru §3 |
+
+---
+
+> **Beyond these 6 domains:** Chemistry (reaction yields, stoichiometry),
+> Geotechnical (bearing capacity, settlement), Acoustics (SPL, noise reduction),
+> Financial (amortization, NPV, IRR), Medical (dosage calculation, BMI, GFR),
+> Astronomy (orbital mechanics), Environmental (emissions, dilution) — any domain
+> with a published formula can contribute a plan to the CRYS-L stdlib.
+> **The language has no domain limit.**
 
 ---
 
@@ -162,6 +207,8 @@ Built-ins: `sqrt`, `pow`, `abs`, `min`, `max`, `log`, `log10`, `round`, `clamp`
 
 ```
 crysl-lang/
+├── SPEC.md                   # Full language specification (v2)
+├── ORIGINALITY.md            # Language originality statement
 ├── paper/
 │   └── main.tex              # Full LaTeX paper (arXiv-ready)
 ├── stdlib/

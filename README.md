@@ -222,6 +222,55 @@ The language itself — grammar, stdlib plans, this repo — is fully open.
 
 ---
 
+## Open Language Initiative
+
+CRYS-L is released as a fully open specification and implementation.
+
+**License:** MIT — free use, modification, and integration into commercial systems.
+
+**Objective:** Become the standard execution layer for deterministic AI computations.
+
+**What CRYS-L enables:**
+- Deterministic computation compiled to WASM (μs–ms scale)
+- Physics-as-Oracle (PaO): equations as the source of truth
+- Execution in browser, server, and embedded environments
+- Exact, standard-referenced answers — no probabilistic approximation
+
+**Important distinction:**
+- CRYS-L (language, compiler, runtime, stdlib) — **open MIT**
+- Qomni Engine (planner, learning loop, retrieval engine) — **proprietary**
+
+Opening CRYS-L creates adoption. Keeping Qomni's cognitive engine closed preserves the architectural advantage. This is the same model used by Linux + cloud vendors, TensorFlow + Google, and LLVM + Apple.
+
+---
+
+## Supporting Qomni
+
+Qomni is an independent research effort advancing a new paradigm in AI systems:
+**execution-first cognitive architectures that minimize unnecessary neural inference.**
+
+**Why support Qomni?**
+- Development of CRYS-L as an open execution language for deterministic AI
+- Research on low-latency inference architectures (μs–ms scale)
+- Creation of domain-specific crystals: engineering, legal, scientific
+- Advancement of AI sovereignty — edge-first, backend-optional systems
+
+**What support enables:**
+- Faster iteration of the Qomni Planner and learning loop
+- Expansion of the CRYS-L standard library to new domains
+- Open tooling for developers and researchers worldwide
+- Infrastructure for global deployment
+
+**Philosophy:**
+
+> AI should think only when necessary. Everything else should be executed.
+
+If you believe in a future where AI is faster, more efficient, less dependent on massive models,
+and accessible everywhere — contribute to CRYS-L or reach out:
+[percy@condesi.pe](mailto:percy@condesi.pe)
+
+---
+
 ## Citation
 
 ```bibtex

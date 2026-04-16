@@ -1,11 +1,11 @@
-# CRYS-L v2.2 — Crystal Language
+# CRYS-L v2.3 — Crystal Language
 
 **Created by Percy Rojas Masgo — Condesi Perú / Qomni AI Lab**
 **Open standard for deterministic engineering calculations.**
 MIT License · [Live Demo](https://qomni.clanmarketer.com/crysl/) · [Paper](paper/CRYSL_JIT_Paper_2026.md)
-**Spec v2.2** — Mixed-case identifiers, formalized assert precedence, clamp/atan built-ins, 13 stdlib domains.
+**Spec v2.3 RC** — Cranelift native JIT, L4 Register ABI, OracleCache, simulation engine, 13 stdlib domains.
 
-> Write an engineering calculation once. Get **exact answers** in **<1 µs**,
+> Write an engineering calculation once. Get **exact answers** in **nanoseconds on the JIT hot path**,
 > with the standard and formula cited. No LLM. No approximation. No setup.
 
 ---
@@ -19,44 +19,43 @@ MIT License · [Live Demo](https://qomni.clanmarketer.com/crysl/) · [Paper](pap
 plan_pump_sizing(500, 100, 0.75)
 → Required HP:  16.84 HP  [NFPA 20:2022 §4.26]
 → Shutoff HP:   23.57 HP
-→ Latency:      842 ns JIT
+→ Latency:      5.37 ns JIT hot path (L4 Register ABI)
+→ HTTP:         ~2–4 ms loopback/API path
 ```
 
 ---
 
 ## Why CRYS-L?
 
-| Question | LLM (GPT-4 Turbo) | CRYS-L v2.1 JIT |
+| Question | LLM (GPT-4 Turbo) | CRYS-L v2.3 JIT |
 |----------|-------------------|-----------------|
-| "500 gpm pump at 100 psi, 75% eff — HP?" | ~17 HP (±15% error) | **16.835 HP** (exact) |
-| Standard cited? | No | NFPA 20:2022 §4.26 |
-| Latency | ~12 s (API) | **842 ns** |
-| Speed ratio | 1× | **14,250,000×** |
+| "500 gpm pump at 100 psi, 75% eff — HP?" | ~17 HP (approximate) | **16.835 HP** (deterministic) |
+| Standard cited? | Not guaranteed | NFPA 20:2022 §4.26 |
+| Hot-path latency | ~12 s API-class response | **5.37 ns** measured JIT hot path |
+| API loopback latency | seconds | **~2–4 ms** TCP + HTTP parse overhead |
 | Reproducible? | No (stochastic) | Yes (deterministic) |
 | Works offline? | No | Yes |
-| Cost per call | $0.01–0.015 | **Free** |
+| Cost per call | API/token cost | **Free local execution** |
 
-**14–18 million× faster than GPT-4. 37–54× faster than Python. Exact answers. Traceable to published standards.**
+**Measured on Server5 KVM AMD EPYC, 2026-04-16:** CRYS-L v2.3 L4 Register ABI executes selected engineering plans in **5.37–10.69 ns** on the JIT hot path. The simulation engine sustains **13.0M scenarios/sec** on the same KVM host.
 
 ---
 
-## Benchmark Results (Server5, AMD EPYC 12-core · 48 GB · Ubuntu 24.04)
+## Benchmark Results (Server5, KVM AMD EPYC · 12-core · 48 GB · Ubuntu 24.04)
 
-> Pure JIT execution — median of 10,000 iterations after 1,000 warm-up.
-> HTTP/JSON overhead excluded (~80 µs via Nginx). Runtime: Rust 1.78 · Cranelift 0.109 · `-C opt-level=3`.
+> Real measured numbers, 2026-04-16. JIT hot-path values use the L4 Register ABI and exclude HTTP/TCP overhead.
+> API loopback adds approximately **2–4 ms** from TCP, HTTP parsing, JSON serialization, and routing.
 
-| Plan | Standard | CRYS-L JIT | C++ -O2 | Python 3.11 | GPT-4 Turbo | vs Python | vs GPT-4 |
-|------|----------|-----------|---------|-------------|-------------|-----------|---------|
-| Fire Pump Sizing | NFPA 20 | **842 ns** | ~1.9 µs | ~41 µs | ~12 s | 49× | 14,250,000× |
-| Sprinkler System | NFPA 13 | **1.2 µs** | ~2.8 µs | ~63 µs | ~11 s | 53× | 9,200,000× |
-| Voltage Drop | IEC 60364 | **971 ns** | ~1.7 µs | ~38 µs | ~8 s | 39× | 8,240,000× |
-| 3-Phase Load | IEC/NEC/IEEE 141 | **1.14 µs** | ~2.1 µs | ~45 µs | ~10 s | 39× | 8,770,000× |
-| Beam Analysis | AISC 360 | **891 ns** | ~2.1 µs | ~48 µs | ~14 s | 54× | 15,700,000× |
-| Slope Stability | ASCE 7-22 | **7.6 µs** | ~14 µs | ~290 µs | ~13 s | 38× | 1,710,000× |
-| Payroll DL 728 | DL 728 Peru | **503 ns** | ~1.1 µs | ~22 µs | ~9 s | 44× | 17,900,000× |
-| Autoclave EN 285 | EN 285 | **3.0 µs** | ~5.8 µs | ~112 µs | ~10 s | 37× | 3,330,000× |
-| 400-Scenario Sweep | multiple | **337 µs** | ~800 µs | ~16 ms | impractical | 47× | ∞ |
-| OracleCache L1 Hit | — | **0 ns** | ~50 ns | ~2 µs | N/A | ∞ | ∞ |
+| Workload | Measured Result | Notes |
+|------|------:|------|
+| Fire Pump Sizing | **5.37 ns** | JIT L4 Register ABI hot path |
+| Sprinkler System | **9.67 ns** | JIT L4 Register ABI hot path |
+| Beam Analysis | **10.69 ns** | JIT L4 Register ABI hot path |
+| OracleCache | **~12 ns** | FNV-1a measured cache probe |
+| Simulation Engine | **13.0M scenarios/sec** | KVM AMD EPYC, continuous SoA loop |
+| Simulation valid fraction | **72.1%** | Physics validation enabled |
+| Simulation Pareto size | **507** | Multi-objective Pareto frontier |
+| HTTP Loopback | **~2–4 ms** | TCP + HTTP parse/API overhead |
 
 Full data: [`benchmarks/results_2026-04-16.json`](benchmarks/results_2026-04-16.json)
 
@@ -66,34 +65,35 @@ Full data: [`benchmarks/results_2026-04-16.json`](benchmarks/results_2026-04-16.
 
 ### Methodology
 
-- Plan: `plan_pump_sizing` (Q=500 gpm, P=100 psi, η=0.75)
-- Hardware: AMD EPYC 7402P · 12 cores · 48GB RAM · Contabo VPS (KVM)
-- Metric: Median of 10,000 runs (nanoseconds)
-- All implementations compute identical mathematical result
+- Hardware: Server5 KVM AMD EPYC · 12 cores · 48GB RAM · Contabo VPS · Ubuntu 24.04 LTS
+- Runtime: CRYS-L v2.3 RC · Rust release build · Cranelift native x86-64 JIT · L4 Register ABI
+- Hot-path metric: measured nanoseconds, HTTP excluded
+- API metric: measured HTTP loopback path, including TCP + HTTP parse overhead
+- Simulation metric: continuous SoA AVX2 loop with physics validation and Pareto ranking
 
 ### Results
 
-| Implementation              | Median Latency | vs Python scalar |
-|----------------------------|---------------|-----------------|
-| **CRYS-L v2.2 (cached)**   | **7 ns**      | **26×**         |
-| **CRYS-L v2.2 (JIT cold)** | **38 ns**     | **4.7×**        |
-| Rust scalar (-O3)          | ~4 ns         | 45×             |
-| C++ -O2 (volatile)         | ~8 ns         | 22×             |
-| Python 3.12 scalar         | ~180 ns       | 1× (baseline)   |
-| NumPy 1.26                 | ~2,800 ns     | 0.06×           |
-| GPT-4 API                  | ~12,000,000,000 ns | 0.000000015× |
+| Benchmark | Result |
+|---|---:|
+| `plan_pump_sizing` | **5.37 ns** |
+| `plan_sprinkler_system` | **9.67 ns** |
+| `plan_beam_analysis` | **10.69 ns** |
+| OracleCache FNV-1a probe | **~12 ns** |
+| Simulation throughput | **13.0M scenarios/sec** |
+| Valid fraction | **72.1%** |
+| Pareto frontier size | **507** |
+| HTTP loopback | **~2–4 ms** |
 
-> Note: Rust/C++/NumPy/Python numbers are theoretical estimates pending full hardware benchmark run.
-> Run `benchmarks/repro.sh` on identical hardware to reproduce all figures.
+> Note: older paper drafts referenced an **86.4M scenarios/sec** simulation figure from an earlier benchmark methodology. The current reproducible Server5 KVM measurement is **13.0M scenarios/sec** and should be treated as the authoritative v2.3 RC number.
 
 ### Why CRYS-L vs C++/Rust?
 
-Pure C++/Rust achieve similar per-call latency, but lack:
+Pure C++/Rust achieve excellent raw arithmetic performance, but CRYS-L adds:
 - **Standards traceability** — every formula cites NFPA/IEC/ISO
-- **Physics validation** — inputs validated against physical bounds
-- **Multi-objective optimization** — 86M scenarios/sec Pareto sweep
-- **Domain constants** — documented magic numbers
-- **Autonomous loop** — `POST /simulation/start` runs continuously
+- **Physics validation** — inputs and outputs checked against domain bounds
+- **Multi-objective optimization** — Pareto-ranked scenario sweeps
+- **Domain constants** — documented engineering constants instead of hidden magic numbers
+- **Autonomous simulation loop** — `POST /simulation/start` runs continuous validation/optimization
 
 ### Real Case: ACI Fire System Optimization
 
@@ -110,17 +110,16 @@ Full baseline data: [`benchmarks/baseline_comparison_2026-04-16.json`](benchmark
 ## How It Works
 
 CRYS-L describes *what to compute*, not how. The runtime compiles each plan via Cranelift JIT
-to native machine code and executes it in sub-microsecond time:
+to native x86-64 machine code and executes the hot path through the L4 Register ABI:
 
 ```
-User query → plan match → param extract → Cranelift JIT → native exec → result
-  (HTTP)       (1 ms)       (0.1 ms)       (first call)    (500–7,600 ns)
-Total: ~5–50 ms end-to-end (HTTP+JSON overhead ~80 µs Nginx)
+User/API call → route → parse params → plan dispatch → JIT hot path → result
+   HTTP         ms        µs-ms          ns-µs          5–11 ns      output
 ```
 
-**OracleCache:** FNV-1a hash on all inputs — repeated identical calls cost **0 ns** (memory read).
+**OracleCache:** FNV-1a hash on all inputs — repeated identical calls measure approximately **12 ns** for cache probe/lookup on Server5 KVM.
 
-Compare to LLM: tokenize → 750M+ params → autoregressive decode → 8,000–45,000 ms → approximate answer.
+Compare to LLM: tokenize → model inference → autoregressive decode → seconds → approximate answer.
 
 ---
 
@@ -154,7 +153,7 @@ plan_pump_sizing(
 
 ---
 
-## Standard Library (v2.2 — 13 Domains, 35+ Plans)
+## Standard Library (v2.3 — 13 Domains, 35+ Plans)
 
 > **CRYS-L has no domain limit.** These 13 domains are the current stdlib.
 > Any deterministic calculation expressible as a formula can become a CRYS-L plan.
@@ -289,33 +288,35 @@ Built-ins: `sqrt`, `pow`, `abs`, `min`, `max`, `clamp`, `log`, `log10`, `round`,
 
 ```
 crysl-lang/
-├── SPEC.md                      # Full language specification (v2.2)
+├── SPEC.md                      # Full language specification
 ├── ORIGINALITY.md               # Language originality statement
+├── LIMITATIONS.md               # Known limitations and safety boundaries
+├── CHANGELOG.md                 # Version history
+├── ROADMAP.md                   # Future milestones
 ├── paper/
 │   ├── CRYSL_JIT_Paper_2026.md  # IEEE-style research paper
-│   └── main.tex                 # LaTeX version (arXiv-ready)
+│   └── main.tex                 # LaTeX version
 ├── stdlib/
-│   ├── hidraulica.crysl         # Hazen-Williams, Darcy-Weisbach, pipe sizing (3 plans)
-│   ├── nfpa_electrico.crysl     # Pump sizing, sprinkler, transformer, voltage drop (4 plans)
-│   ├── civil.crysl              # Beam deflection, column, slope stability (3+ plans)
-│   ├── electrical.crysl         # Voltage drop, 3-phase, solar PV, PFC (4 plans)
-│   ├── financial.crysl          # IGV, planilla DL728, VAN/ROI, loan (4 plans)
-│   ├── medical.crysl            # Autoclave, BMI, drug dosing (3 plans)
-│   ├── statistics.crysl         # Descriptive stats, sample size (2 plans)
-│   ├── transport.crysl          # Logistics cost, fuel cost (2 plans)
-│   ├── mecanica.crysl           # Shaft power, belt drive, gear ratio (3 plans) [NEW v2.2]
-│   ├── termica.crysl            # Heat load, heat pump COP, cooling load (3 plans) [NEW v2.2]
-│   └── sanitaria.crysl          # Water demand, cistern, drainage pipe (3 plans) [NEW v2.2]
+│   ├── hidraulica.crysl
+│   ├── nfpa_electrico.crysl
+│   ├── civil.crysl
+│   ├── electrical.crysl
+│   ├── financial.crysl
+│   ├── medical.crysl
+│   ├── statistics.crysl
+│   ├── transport.crysl
+│   ├── mecanica.crysl
+│   ├── termica.crysl
+│   └── sanitaria.crysl
 ├── runtime/
-│   ├── interpreter.md           # How the JIT runtime works
-│   └── integration_guide.md     # Embedding CRYS-L in your app
+│   ├── interpreter.md
+│   └── integration_guide.md
 ├── examples/
-│   ├── hello_pump.crysl         # Fire pump sizing
-│   ├── hello_hazen.crysl        # Pipe flow calculation
-│   └── hello_cable.crysl        # Electrical cable sizing
+│   ├── hello_pump.crysl
+│   ├── hello_hazen.crysl
+│   └── hello_cable.crysl
 ├── benchmarks/
-│   ├── results_2026-04-13.json  # Early WASM baseline
-│   └── results_2026-04-16.json  # v2.1 JIT Cranelift — 10 plans, real ns data
+│   └── results_2026-04-16.json  # v2.3 RC measured Server5 KVM data
 └── README.md
 ```
 
@@ -325,27 +326,14 @@ crysl-lang/
 
 1. Fork this repo
 2. Write your plan in `stdlib/{domain}.crysl`
-3. Add test vectors in `benchmarks/tests/{plan_name}.json`:
-```json
-{
-  "plan": "plan_hazen_williams",
-  "cases": [
-    {
-      "inputs": {"Q": 2.5, "D": 150.0, "C": 120.0, "L": 200.0},
-      "expected": {"V": 0.141, "h_f": 0.089},
-      "tolerance_pct": 0.5,
-      "source": "IS.010 Peru, Example 3.2"
-    }
-  ]
-}
-```
+3. Add test vectors in `benchmarks/tests/{plan_name}.json`
 4. Submit PR — all valid plans following the grammar are welcome
 
 **Checklist:**
 - [ ] `meta {}` with standard name + section reference
 - [ ] `assert` for each input with meaningful error message
 - [ ] `formula` for each key equation
-- [ ] `return {}` with all computed values
+- [ ] `return {}` or `output` with all computed values
 - [ ] 3+ test cases from published reference tables
 
 ---
@@ -386,11 +374,11 @@ CRYS-L is released as a fully open specification and implementation.
 **Objective:** Become the standard execution layer for deterministic AI computations.
 
 **What CRYS-L enables:**
-- Deterministic computation via Cranelift JIT (500–7,600 ns per plan)
+- Deterministic computation via Cranelift native JIT and L4 Register ABI
 - Physics-as-Oracle (PaO): equations as primary source of truth
-- OracleCache: FNV-1a hash lookup for 0 ns on repeated identical inputs
+- OracleCache: FNV-1a measured cache probe around ~12 ns on Server5 KVM
 - Exact, standard-referenced answers — no probabilistic approximation
-- Parallel DAG dispatch: 400 scenarios in 337 µs on 12-core AMD EPYC
+- Continuous simulation engine: 13.0M scenarios/sec measured on Server5 KVM
 
 **Important distinction:**
 - CRYS-L (language, compiler, runtime, stdlib) — **open MIT**
@@ -419,11 +407,11 @@ and accessible everywhere — contribute to CRYS-L or reach out:
 ```bibtex
 @article{rojasmasgo2026crysl,
   title   = {CRYS-L: A Domain-Specific Language for Deterministic Engineering
-             Calculations at Sub-Microsecond Latency},
+             Calculations at Nanosecond-Scale Latency},
   author  = {Rojas Masgo, Percy and {Qomni AI Lab}},
   year    = {2026},
   month   = {April},
-  note    = {Open Standard, MIT License. Server5 AMD EPYC benchmark: 503–7600 ns JIT},
+  note    = {Open Standard, MIT License. Server5 KVM AMD EPYC benchmark: 5.37–10.69 ns JIT hot path; 13.0M scenarios/sec simulation engine},
   url     = {https://github.com/condesi/crysl-lang}
 }
 ```

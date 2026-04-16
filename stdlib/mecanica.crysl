@@ -1,0 +1,178 @@
+// CRYS-L v2 Standard Library — Mechanical Engineering
+// Author:    Percy Rojas Masgo — Condesi Perú / Qomni AI Lab
+// Copyright: (c) 2026 Percy Rojas Masgo. CRYS-L language designed by Percy Rojas Masgo.
+// License:   MIT — github.com/condesi/crysl-lang
+// Note:      Formulas are mathematical laws (public domain). Implementations are original.
+//            Standards cited by name/section only — no text copied from copyrighted documents.
+// Standards: ISO 1:2016, ISO 14691, AGMA 2001-D04, ASME B17.1, ISO 6336
+
+// ────────────────────────────────────────────────────────────────────────────
+// SHAFT POWER — ISO 1:2016 / ISO 14691
+// P = τ × ω  where ω = 2π·n/60 (angular velocity in rad/s)
+// HP conversion: 1 metric HP = 76.04 kgf·m/s
+// ────────────────────────────────────────────────────────────────────────────
+
+plan_shaft_power(
+    torque_nm: f64,          // shaft torque (N·m)
+    rpm:       f64           // rotational speed (rev/min)
+) {
+    meta {
+        standard: "ISO 1:2016 — Geometrical product specifications / ISO 14691:2006",
+        source: "ISO 14691 §5.2 (power/torque relationship); ISO 1 §3",
+        domain: "mecanica",
+        version: "2.2",
+        note: "HP conversion factor: 1 metric HP = 76.04 kgf·m/s (fluid power convention)",
+    }
+
+    const PI        = 3.14159265358979;
+    const HP_FACTOR = 76.04;     // 1 metric HP = 76.04 kgf·m/s
+    const KGF_NM    = 9.80665;   // 1 kgf·m = 9.80665 N·m (SI gravity)
+
+    // Angular velocity (rad/s)
+    let omega_rads = 2.0 * PI * rpm / 60.0;
+
+    // Shaft power (W)
+    let P_watts = torque_nm * omega_rads;
+
+    // Shaft power (kW)
+    let P_kw = P_watts / 1000.0;
+
+    // Shaft power in metric HP (kgf·m/s → HP)
+    // 1 W = 1 N·m/s = 1/(9.80665) kgf·m/s → HP = P[W] / (9.80665 × 76.04)
+    let P_hp = P_watts / (KGF_NM * HP_FACTOR);
+
+    // Torque in kgf·m (useful for legacy references)
+    let torque_kgfm = torque_nm / KGF_NM;
+
+    formula "Shaft power": "P [W] = τ [N·m] × ω [rad/s]";
+    formula "Angular velocity": "ω = 2π · n / 60  [n in rpm]";
+    formula "Power in kW": "P [kW] = P [W] / 1000";
+    formula "HP conversion": "76.04 kgf·m/s = 1 HP (metric)";
+    formula "Metric HP": "P [HP] = P [W] / (9.80665 × 76.04)";
+
+    assert torque_nm > 0.0    msg "torque must be positive (N·m)";
+    assert rpm       > 0.0    msg "rotational speed must be positive (rpm)";
+    assert rpm       <= 50000.0 msg "speed exceeds 50,000 rpm — verify input";
+    assert torque_nm <= 1000000.0 msg "torque exceeds 1 MN·m — verify input";
+
+    output P_watts    label "Shaft power"            unit "W";
+    output P_kw       label "Shaft power"            unit "kW";
+    output P_hp       label "Shaft power"            unit "HP (metric)";
+    output omega_rads label "Angular velocity"       unit "rad/s";
+    output torque_kgfm label "Torque"               unit "kgf·m";
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// BELT DRIVE — ISO 22: 2012 / ASME B17.1
+// Calculates effective tension, tight/slack side tensions, and belt power
+// ────────────────────────────────────────────────────────────────────────────
+
+plan_belt_drive(
+    P_kw:          f64,         // power to be transmitted (kW)
+    v_ms:          f64,         // belt velocity (m/s)
+    tension_ratio: f64 = 3.0   // tight-to-slack tension ratio (e^μθ, default ≈ e^(0.3×π))
+) {
+    meta {
+        standard: "ISO 22:2012 — V-belts for Industrial Applications / ASME B17.1-1998",
+        source: "ISO 22 §6.3 (effective tension); ASME B17.1 §7 (power rating)",
+        domain: "mecanica",
+        version: "2.2",
+        note: "tension_ratio = e^(μ·θ): for flat belts μ≈0.3, contact angle θ≈π gives ratio≈2.57",
+    }
+
+    // Effective (tangential) force on belt (N)
+    let F_eff = (P_kw * 1000.0) / v_ms;
+
+    // Tight-side tension T1 and slack-side tension T2
+    // F_eff = T1 - T2  and  T1/T2 = tension_ratio
+    // → T2 = F_eff / (tension_ratio - 1.0)
+    // → T1 = T2 × tension_ratio
+    let T2 = F_eff / (tension_ratio - 1.0);
+    let T1 = T2 * tension_ratio;
+
+    // Initial tension (average of T1 and T2, approximation for V-belt)
+    let T_initial = (T1 + T2) / 2.0;
+
+    // Belt power check
+    let P_check_kw = F_eff * v_ms / 1000.0;
+
+    formula "Effective tension": "F_eff = P [W] / v [m/s]";
+    formula "Belt tensions": "T1 = T2 × ratio;  T2 = F_eff / (ratio - 1)";
+    formula "Tension ratio": "e^(μ·θ) — Euler belt friction equation";
+    formula "Initial tension": "T_i ≈ (T1 + T2) / 2";
+
+    assert P_kw          > 0.0  msg "power must be positive (kW)";
+    assert v_ms          > 0.0  msg "belt velocity must be positive (m/s)";
+    assert v_ms          <= 50.0 msg "belt velocity exceeds 50 m/s — check specification";
+    assert tension_ratio > 1.0  msg "tension ratio must be > 1.0 (T1 > T2 always)";
+    assert tension_ratio <= 10.0 msg "tension ratio unusually high — verify μ and θ";
+
+    output F_eff      label "Effective tension"   unit "N";
+    output T1         label "Tight-side tension"  unit "N";
+    output T2         label "Slack-side tension"  unit "N";
+    output T_initial  label "Initial (centring) tension" unit "N";
+    output P_check_kw label "Transmitted power (check)" unit "kW";
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// GEAR RATIO & TORQUE MULTIPLICATION — AGMA 2001-D04 / ISO 6336
+// ────────────────────────────────────────────────────────────────────────────
+
+plan_gear_ratio(
+    n_input:    f64,         // input shaft speed (rpm)
+    n_output:   f64,         // output shaft speed (rpm)
+    T_input_nm: f64          // input torque (N·m)
+) {
+    meta {
+        standard: "AGMA 2001-D04 — Fundamental Rating Factors for Involute Spur/Helical Gears",
+        source: "AGMA 2001 §5.1 (gear ratio); ISO 6336-1:2006 §5",
+        domain: "mecanica",
+        version: "2.2",
+        note: "Assumes ideal (100% efficient) gear mesh for basic torque multiplication",
+    }
+
+    const PI        = 3.14159265358979;
+    const HP_FACTOR = 76.04;   // 1 metric HP = 76.04 kgf·m/s
+    const KGF_NM    = 9.80665;
+
+    // Gear ratio (speed ratio)
+    let gear_ratio = n_input / n_output;
+
+    // Output torque (ideal, no losses)
+    let T_output_nm = T_input_nm * gear_ratio;
+
+    // Input angular velocity (rad/s)
+    let omega_in = 2.0 * PI * n_input / 60.0;
+
+    // Output angular velocity (rad/s)
+    let omega_out = 2.0 * PI * n_output / 60.0;
+
+    // Power at input shaft (W) — should equal output power for ideal mesh
+    let P_in_w = T_input_nm * omega_in;
+
+    // Power in metric HP
+    let P_hp = P_in_w / (KGF_NM * HP_FACTOR);
+    formula "HP conversion": "76.04 kgf·m/s = 1 HP (metric)";
+
+    // Output torque in kgf·m
+    let T_out_kgfm = T_output_nm / KGF_NM;
+
+    formula "Gear ratio": "i = n_input / n_output";
+    formula "Torque multiplication": "T_out = T_in × i  (ideal mesh)";
+    formula "Angular velocity": "ω = 2π · n / 60";
+    formula "Shaft power": "P = T × ω  [W]";
+
+    assert n_input    > 0.0    msg "input speed must be positive (rpm)";
+    assert n_output   > 0.0    msg "output speed must be positive (rpm)";
+    assert T_input_nm > 0.0    msg "input torque must be positive (N·m)";
+    assert gear_ratio > 0.0    msg "gear ratio must be positive";
+    assert gear_ratio <= 200.0 msg "gear ratio > 200 — verify input/output speeds";
+
+    output gear_ratio   label "Gear ratio (speed reduction)"   unit "—";
+    output T_output_nm  label "Output torque"                  unit "N·m";
+    output T_out_kgfm   label "Output torque"                  unit "kgf·m";
+    output P_in_w       label "Shaft power"                    unit "W";
+    output P_hp         label "Shaft power"                    unit "HP (metric)";
+    output omega_in     label "Input angular velocity"         unit "rad/s";
+    output omega_out    label "Output angular velocity"        unit "rad/s";
+}

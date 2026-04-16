@@ -1,0 +1,183 @@
+// CRYS-L v2 Standard Library — Sanitary Hydraulics (IS.010 Peru / RNE)
+// Author:    Percy Rojas Masgo — Condesi Perú / Qomni AI Lab
+// Copyright: (c) 2026 Percy Rojas Masgo. CRYS-L language designed by Percy Rojas Masgo.
+// License:   MIT — github.com/condesi/crysl-lang
+// Note:      Formulas are mathematical laws (public domain). Implementations are original.
+//            Standards cited by name/section only — no text copied from copyrighted documents.
+// Standards: IS.010 Peru (Instalaciones Sanitarias), RNE OS.050, RNE OS.100
+
+// ────────────────────────────────────────────────────────────────────────────
+// DAILY WATER DEMAND — IS.010 Peru / RNE OS.050
+// Q_daily [L/day] = units × liters_per_unit × peak_factor
+// IS.010 Table 1: residential = 200 L/hab/day, offices = 20 L/m²/day, etc.
+// ────────────────────────────────────────────────────────────────────────────
+
+plan_water_demand(
+    units:           f64,          // number of units (inhabitants, m², beds, etc.)
+    liters_per_unit: f64 = 200.0, // unit water demand (L/unit/day) — IS.010 Table 1
+    peak_factor:     f64 = 1.80   // peak hourly factor K2 — IS.010 §2.4: 1.8 residential
+) {
+    meta {
+        standard: "IS.010 Peru — Instalaciones Sanitarias para Edificaciones / RNE OS.050:2006",
+        source: "IS.010 §2.2 Tabla 1 (dotaciones); IS.010 §2.4 coeficientes de variación K1=1.3, K2=1.8",
+        domain: "sanitaria",
+        version: "2.2",
+        note: "IS.010 dotations: residential 200 L/hab/day, offices 20 L/m²/day, hospitals 600 L/bed/day",
+    }
+
+    const K1 = 1.30;    // IS.010 §2.4: daily peak factor (máximo diario)
+    const S_PER_DAY = 86400.0;   // seconds per day
+
+    // Total daily demand (L/day)
+    let Q_daily_lpd = units * liters_per_unit;
+
+    // Maximum daily flow (L/day) — K1 applied
+    let Q_max_daily_lpd = Q_daily_lpd * K1;
+
+    // Maximum hourly flow (L/day) — K2 applied to average daily
+    let Q_peak_lpd = Q_daily_lpd * peak_factor;
+
+    // Average flow rate (L/s) — for pipe sizing
+    let Q_avg_lps = Q_daily_lpd / S_PER_DAY;
+
+    // Peak flow rate (L/s) — for pipe and pump sizing
+    let Q_peak_lps = Q_peak_lpd / S_PER_DAY;
+
+    // Maximum daily flow (L/s)
+    let Q_max_daily_lps = Q_max_daily_lpd / S_PER_DAY;
+
+    formula "Daily demand": "Q_daily = units × dotación [L/unit/day]";
+    formula "Peak demand": "Q_peak = Q_daily × K2  (K2=1.8 residential, IS.010 §2.4)";
+    formula "Max daily": "Q_max_daily = Q_daily × K1  (K1=1.3, IS.010 §2.4)";
+    formula "Flow rate": "Q [L/s] = Q [L/day] / 86400";
+
+    assert units           > 0.0     msg "number of units must be positive";
+    assert liters_per_unit > 0.0     msg "unit demand must be positive (L/unit/day)";
+    assert liters_per_unit <= 2000.0 msg "unit demand > 2000 L/unit/day — verify IS.010 table";
+    assert peak_factor     >= 1.0    msg "peak factor must be ≥ 1.0 (IS.010 K2)";
+    assert peak_factor     <= 4.0    msg "peak factor > 4.0 — outside normal IS.010 range";
+
+    output Q_daily_lpd      label "Daily water demand"           unit "L/day";
+    output Q_max_daily_lpd  label "Max daily demand (K1=1.3)"    unit "L/day";
+    output Q_peak_lpd       label "Peak hourly demand (K2)"      unit "L/day";
+    output Q_avg_lps        label "Average flow rate"            unit "L/s";
+    output Q_peak_lps       label "Peak flow rate"               unit "L/s";
+    output Q_max_daily_lps  label "Max daily flow rate"          unit "L/s";
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// CISTERN / TANK SIZING — IS.010 Peru §3 / RNE OS.050
+// V_cisterna = Q_daily × days × safety_factor
+// ────────────────────────────────────────────────────────────────────────────
+
+plan_cistern_volume(
+    demand_lpd: f64,          // daily water demand (L/day)
+    days:       f64 = 1.0,   // storage autonomy (days) — IS.010 §3: min 1 day for residential
+    safety:     f64 = 1.20   // safety/reserve factor — 20% extra per IS.010 §3.1.4
+) {
+    meta {
+        standard: "IS.010 Peru §3 — Almacenamiento de Agua / RNE OS.050:2006",
+        source: "IS.010 §3.1.4 (volumen de regulación); RNE OS.050 §5.1.1 (cisterna mínima)",
+        domain: "sanitaria",
+        version: "2.2",
+        note: "IS.010 §3.1.4: cistern volume = daily demand × autonomy days × 1.20 safety. Min depth: 1.50 m.",
+    }
+
+    // Net storage volume required (L)
+    let V_net_l = demand_lpd * days;
+
+    // Design volume with safety factor (L)
+    let V_design_l = V_net_l * safety;
+
+    // Convert to m³ (1 L = 0.001 m³)
+    let V_net_m3 = V_net_l / 1000.0;
+    let V_design_m3 = V_design_l / 1000.0;
+
+    // Minimum cistern dimensions check (IS.010 §3.1.5: min depth 1.50 m, min width 0.80 m)
+    // Given volume, suggest a square footprint with 1.5 m depth
+    let min_depth = 1.50;          // IS.010 minimum depth (m)
+    let footprint_m2 = V_design_m3 / min_depth;
+    let side_m = pow(footprint_m2, 0.5);   // square plan dimension
+
+    formula "Net volume": "V_net = Q_daily [L/day] × days";
+    formula "Design volume": "V_design = V_net × safety_factor";
+    formula "Footprint": "A = V_design / h_min  (h_min = 1.50 m per IS.010)";
+
+    assert demand_lpd > 0.0    msg "daily demand must be positive (L/day)";
+    assert days       >= 1.0   msg "storage autonomy must be ≥ 1 day (IS.010 §3)";
+    assert days       <= 30.0  msg "storage autonomy > 30 days — verify requirement";
+    assert safety     >= 1.0   msg "safety factor must be ≥ 1.0";
+    assert safety     <= 2.0   msg "safety factor > 2.0 — outside normal range";
+
+    output V_net_l      label "Net storage volume required"     unit "L";
+    output V_design_l   label "Design volume (with safety)"     unit "L";
+    output V_net_m3     label "Net storage volume"              unit "m³";
+    output V_design_m3  label "Design volume"                   unit "m³";
+    output footprint_m2 label "Cistern footprint at 1.50 m depth" unit "m²";
+    output side_m       label "Square plan side dimension"      unit "m";
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// DRAINAGE PIPE SIZING — Manning Formula / IS.010 Peru / RNE OS.070
+// Q = (1/n) × A × R^(2/3) × S^(1/2)  (Manning's formula, SI units)
+// ────────────────────────────────────────────────────────────────────────────
+
+plan_drainage_pipe(
+    flow_lps:    f64,          // design drainage flow (L/s)
+    slope:       f64 = 0.01,  // pipe slope (m/m) — IS.010 §6: min 1% for drainage
+    n_roughness: f64 = 0.013  // Manning roughness coefficient — PVC = 0.009, concrete = 0.013
+) {
+    meta {
+        standard: "IS.010 Peru §6 — Desagüe y Ventilación / RNE OS.070:2006 (Manning)",
+        source: "IS.010 §6.2 (pendiente mínima, diámetros); Manning 1891; RNE OS.070 §4.2",
+        domain: "sanitaria",
+        version: "2.2",
+        note: "Manning n: PVC=0.009, cast iron=0.012, concrete=0.013, clay=0.013. Circular pipe, full flow.",
+    }
+
+    const PI = 3.14159265358979;
+
+    // Convert flow from L/s to m³/s
+    let Q_m3s = flow_lps / 1000.0;
+
+    // Manning formula rearranged for required pipe diameter (full-flow circular pipe):
+    // Q = (1/n) × (π/4 × D²) × (D/4)^(2/3) × S^(1/2)
+    // Q = (1/n) × (π/4) × D² × D^(2/3) / 4^(2/3) × S^(0.5)
+    // Q = (1/n) × (π / (4 × 4^(2/3))) × D^(8/3) × S^(0.5)
+    // D = [Q × n × 4^(2/3) / (π/4 × S^(0.5))]^(3/8)
+    // Constant k = 4^(2/3) ≈ 2.5198
+    let K_MANNING = pow(4.0, 2.0 / 3.0);    // ≈ 2.5198
+
+    // Required diameter (m) for full-flow condition
+    let D_req_m = pow(Q_m3s * n_roughness * K_MANNING / ((PI / 4.0) * pow(slope, 0.5)), 3.0 / 8.0);
+
+    // Required diameter in mm
+    let D_req_mm = D_req_m * 1000.0;
+
+    // Hydraulic radius for calculated diameter (full-flow circular)
+    let A_pipe = PI * D_req_m * D_req_m / 4.0;
+    let R_h = D_req_m / 4.0;
+
+    // Flow velocity (m/s) — Manning
+    let V_ms = (1.0 / n_roughness) * pow(R_h, 2.0 / 3.0) * pow(slope, 0.5);
+
+    // IS.010 §6.2 velocity limits: min 0.6 m/s (self-cleaning), max 3.0 m/s (erosion)
+    let velocity_ok = V_ms >= 0.6 && V_ms <= 3.0;
+
+    formula "Manning flow": "Q = (1/n) × A × R^(2/3) × S^(1/2)";
+    formula "Required diameter": "D = [Q·n·4^(2/3) / ((π/4)·S^(1/2))]^(3/8)";
+    formula "Velocity": "V = (1/n) × R^(2/3) × S^(1/2)  [Manning, m/s]";
+
+    assert flow_lps    > 0.0    msg "design flow must be positive (L/s)";
+    assert slope       > 0.0    msg "pipe slope must be positive (m/m)";
+    assert slope       >= 0.005 msg "slope < 0.5% — below IS.010 §6.2 minimum for drainage";
+    assert slope       <= 0.20  msg "slope > 20% — verify design (risk of erosion)";
+    assert n_roughness > 0.005  msg "Manning n must be > 0.005";
+    assert n_roughness <= 0.030 msg "Manning n > 0.030 — outside standard material range";
+
+    output D_req_mm    label "Required pipe diameter"           unit "mm";
+    output V_ms        label "Flow velocity (Manning)"          unit "m/s";
+    output A_pipe      label "Pipe cross-sectional area"        unit "m²";
+    output R_h         label "Hydraulic radius"                 unit "m";
+    output velocity_ok label "Velocity within IS.010 limits (0.6–3.0 m/s)" unit "bool";
+}

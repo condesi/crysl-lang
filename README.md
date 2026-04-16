@@ -1,8 +1,9 @@
-# CRYS-L v2 — Crystal Language
+# CRYS-L v2.2 — Crystal Language
 
 **Created by Percy Rojas Masgo — Condesi Perú / Qomni AI Lab**
 **Open standard for deterministic engineering calculations.**
 MIT License · [Live Demo](https://qomni.clanmarketer.com/crysl/) · [Paper](paper/CRYSL_JIT_Paper_2026.md)
+**Spec v2.2** — Mixed-case identifiers, formalized assert precedence, clamp/atan built-ins, 13 stdlib domains.
 
 > Write an engineering calculation once. Get **exact answers** in **<1 µs**,
 > with the standard and formula cited. No LLM. No approximation. No setup.
@@ -108,9 +109,9 @@ plan_pump_sizing(
 
 ---
 
-## Standard Library (v2 — 10 Domains)
+## Standard Library (v2.2 — 13 Domains, 35+ Plans)
 
-> **CRYS-L has no domain limit.** These 10 domains are the current stdlib.
+> **CRYS-L has no domain limit.** These 13 domains are the current stdlib.
 > Any deterministic calculation expressible as a formula can become a CRYS-L plan.
 
 ### Fire Protection (NFPA)
@@ -192,16 +193,27 @@ plan_pump_sizing(
 
 | Plan | Formula | Standard |
 |------|---------|---------|
-| `plan_water_demand(units, type)` | Q_daily from fixture units | IS.010 Peru |
-| `plan_tank_sizing(Q_daily, hours)` | V = Q·t | IS.010 Peru §3 |
+| `plan_water_demand(units, liters_per_unit, peak_factor)` | Q = units × dotación × K2 | IS.010 Peru §2.2 |
+| `plan_cistern_volume(demand_lpd, days, safety)` | V = Q_daily × days × safety | IS.010 Peru §3.1.4 |
+| `plan_drainage_pipe(flow_lps, slope, n_roughness)` | D = [Q·n·4^(2/3) / ((π/4)·S^(1/2))]^(3/8) | IS.010 §6.2 / Manning |
 
 ### Mechanical (ISO / ASME / AGMA)
 `stdlib/mecanica.crysl`
 
 | Plan | Formula | Standard |
 |------|---------|---------|
-| `plan_shaft_power(T, rpm)` | P = T·ω | ISO 14691 |
-| `plan_gear_ratio(N1, N2, T_in)` | T_out = T_in·(N2/N1) | AGMA 2001 |
+| `plan_shaft_power(torque_nm, rpm)` | P = τ × ω = τ × 2π·n/60 | ISO 1:2016 / ISO 14691 |
+| `plan_belt_drive(P_kw, v_ms, tension_ratio)` | F_eff = P/v; T1 = T2 × ratio | ISO 22:2012 / ASME B17.1 |
+| `plan_gear_ratio(n_input, n_output, T_input_nm)` | T_out = T_in × (n_in/n_out) | AGMA 2001-D04 / ISO 6336 |
+
+### Thermal / HVAC (ISO 6946 / ASHRAE)
+`stdlib/termica.crysl`
+
+| Plan | Formula | Standard |
+|------|---------|---------|
+| `plan_heat_load(area_m2, delta_t, u_value)` | Q = U × A × ΔT | ISO 6946:2017 |
+| `plan_cop_heat_pump(T_hot_k, T_cold_k, eff)` | COP = η × T_hot / (T_hot − T_cold) | EN 14511:2018 / Carnot |
+| `plan_cooling_load(area_m2, watt_per_m2, eff_factor)` | Q = area × W/m² × eff | ASHRAE 140-2017 |
 
 ---
 
@@ -224,7 +236,7 @@ expr       ::= term (('+' | '-' | '*' | '/' | '^') term)*
 term       ::= number | ident | ident '(' args ')' | '(' expr ')'
 ```
 
-Built-ins: `sqrt`, `pow`, `abs`, `min`, `max`, `log`, `log10`, `round`, `ceil`, `clamp`
+Built-ins: `sqrt`, `pow`, `abs`, `min`, `max`, `clamp`, `log`, `log10`, `round`, `ceil`, `floor`, `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `atan2`, `pi`, `e`
 
 ---
 
@@ -232,23 +244,23 @@ Built-ins: `sqrt`, `pow`, `abs`, `min`, `max`, `log`, `log10`, `round`, `ceil`, 
 
 ```
 crysl-lang/
-├── SPEC.md                      # Full language specification (v2)
+├── SPEC.md                      # Full language specification (v2.2)
 ├── ORIGINALITY.md               # Language originality statement
 ├── paper/
 │   ├── CRYSL_JIT_Paper_2026.md  # IEEE-style research paper
 │   └── main.tex                 # LaTeX version (arXiv-ready)
 ├── stdlib/
-│   ├── hidraulica.crysl         # Hazen-Williams, Darcy-Weisbach, pipe sizing
-│   ├── nfpa_electrico.crysl     # Pump sizing, sprinkler, fire protection
-│   ├── civil.crysl              # Beam, column, slope stability
-│   ├── electrical.crysl         # Voltage drop, 3-phase, solar PV, PFC
-│   ├── financial.crysl          # IGV, planilla DL728, VAN/ROI, loan
-│   ├── medical.crysl            # Autoclave, BMI, drug dosing
-│   ├── statistics.crysl         # Descriptive stats, sample size
-│   ├── transport.crysl          # Logistics cost, fuel cost
-│   ├── mecanica.crysl           # Shaft power, torque, gear ratio
-│   ├── termica.crysl            # HVAC load, heat transfer
-│   └── sanitaria.crysl          # Water demand, tank sizing
+│   ├── hidraulica.crysl         # Hazen-Williams, Darcy-Weisbach, pipe sizing (3 plans)
+│   ├── nfpa_electrico.crysl     # Pump sizing, sprinkler, transformer, voltage drop (4 plans)
+│   ├── civil.crysl              # Beam deflection, column, slope stability (3+ plans)
+│   ├── electrical.crysl         # Voltage drop, 3-phase, solar PV, PFC (4 plans)
+│   ├── financial.crysl          # IGV, planilla DL728, VAN/ROI, loan (4 plans)
+│   ├── medical.crysl            # Autoclave, BMI, drug dosing (3 plans)
+│   ├── statistics.crysl         # Descriptive stats, sample size (2 plans)
+│   ├── transport.crysl          # Logistics cost, fuel cost (2 plans)
+│   ├── mecanica.crysl           # Shaft power, belt drive, gear ratio (3 plans) [NEW v2.2]
+│   ├── termica.crysl            # Heat load, heat pump COP, cooling load (3 plans) [NEW v2.2]
+│   └── sanitaria.crysl          # Water demand, cistern, drainage pipe (3 plans) [NEW v2.2]
 ├── runtime/
 │   ├── interpreter.md           # How the JIT runtime works
 │   └── integration_guide.md     # Embedding CRYS-L in your app

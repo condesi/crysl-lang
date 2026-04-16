@@ -1,0 +1,171 @@
+// CRYS-L v2 Standard Library — Thermal Engineering (HVAC & Heat Transfer)
+// Author:    Percy Rojas Masgo — Condesi Perú / Qomni AI Lab
+// Copyright: (c) 2026 Percy Rojas Masgo. CRYS-L language designed by Percy Rojas Masgo.
+// License:   MIT — github.com/condesi/crysl-lang
+// Note:      Formulas are mathematical laws (public domain). Implementations are original.
+//            Standards cited by name/section only — no text copied from copyrighted documents.
+// Standards: ISO 6946:2017, ASHRAE 140-2017, EN 14511:2018, ASHRAE Fundamentals 2021
+
+// ────────────────────────────────────────────────────────────────────────────
+// HEAT LOAD (TRANSMISSION) — ISO 6946:2017 / EN ISO 13790
+// Q = U × A × ΔT  (basic thermal transmittance equation)
+// U-value (W/m²·K) is the inverse of thermal resistance R-total
+// ────────────────────────────────────────────────────────────────────────────
+
+plan_heat_load(
+    area_m2:  f64,          // surface area of the envelope element (m²)
+    delta_t:  f64,          // temperature difference (K or °C delta)
+    u_value:  f64           // thermal transmittance U (W/m²·K)
+) {
+    meta {
+        standard: "ISO 6946:2017 — Building Components and Building Elements — Thermal Resistance and Transmittance",
+        source: "ISO 6946:2017 §6 (U-value calculation); EN ISO 13790:2008 §8.3",
+        domain: "termica",
+        version: "2.2",
+        note: "U-values: typical wall 0.3–1.5, roof 0.1–0.5, window 1.0–3.0, uninsulated wall 2.0–4.0",
+    }
+
+    // Heat flow rate through element (W)
+    let Q_watts = u_value * area_m2 * delta_t;
+
+    // Heat flow in kW
+    let Q_kw = Q_watts / 1000.0;
+
+    // Annual energy (kWh/year) — assuming delta_t applies for typical 2000 heating hours
+    // Note: actual degree-hours depend on climate; this is a simplified estimate
+    let Q_annual_kwh = Q_kw * 2000.0;
+
+    // Thermal resistance (m²·K/W) — inverse of U-value
+    let R_total = 1.0 / u_value;
+
+    // Compliance check: typical building envelope limit U ≤ 1.5 W/m²·K (general)
+    let compliant_envelope = u_value <= 1.5;
+
+    formula "Heat load": "Q [W] = U [W/m²·K] × A [m²] × ΔT [K]";
+    formula "Thermal resistance": "R = 1 / U  [m²·K/W]";
+    formula "Annual energy estimate": "E ≈ Q_kW × 2000 h/year  (simplified)";
+
+    assert area_m2 > 0.0    msg "area must be positive (m²)";
+    assert delta_t > 0.0    msg "temperature difference must be positive (K)";
+    assert u_value > 0.0    msg "U-value must be positive (W/m²·K)";
+    assert u_value <= 10.0  msg "U-value > 10 W/m²·K is physically unreasonable";
+    assert delta_t <= 80.0  msg "temperature difference > 80 K — verify climate data";
+
+    output Q_watts           label "Heat load"                    unit "W";
+    output Q_kw              label "Heat load"                    unit "kW";
+    output Q_annual_kwh      label "Annual heat loss (estimate)"  unit "kWh/year";
+    output R_total           label "Thermal resistance"           unit "m²·K/W";
+    output compliant_envelope label "U ≤ 1.5 W/m²·K (general limit)" unit "bool";
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// HEAT PUMP COP — Carnot / EN 14511:2018
+// COP_Carnot = T_hot / (T_hot - T_cold)  [temperatures in Kelvin]
+// Real COP = eff × COP_Carnot
+// ────────────────────────────────────────────────────────────────────────────
+
+plan_cop_heat_pump(
+    T_hot_k:  f64,          // hot reservoir temperature (K) — condenser side
+    T_cold_k: f64,          // cold reservoir temperature (K) — evaporator side
+    eff:      f64 = 0.50    // second-law efficiency (0–1); typical real HP: 0.40–0.60
+) {
+    meta {
+        standard: "EN 14511:2018 — Air conditioners, liquid chilling packages and heat pumps",
+        source: "EN 14511-1 §3.7 (COP definition); Carnot: Réflexions 1824 §1",
+        domain: "termica",
+        version: "2.2",
+        note: "COP_Carnot is the theoretical maximum. Real COP = eff × COP_Carnot. EN 14511 A7/W35 test conditions.",
+    }
+
+    // Carnot COP for heat pump (heating mode)
+    let COP_carnot = T_hot_k / (T_hot_k - T_cold_k);
+
+    // Real (actual) COP
+    let COP_real = eff * COP_carnot;
+
+    // Temperature lift (K)
+    let T_lift = T_hot_k - T_cold_k;
+
+    // Energy efficiency ratio (EER) for cooling mode: COP_cooling = COP_heating - 1
+    let COP_cooling = COP_real - 1.0;
+
+    // For 1 kW electrical input: heating and cooling output
+    let heat_output_kw = COP_real * 1.0;
+    let cool_output_kw = COP_cooling * 1.0;
+
+    formula "Carnot COP (heating)": "COP_C = T_hot / (T_hot - T_cold)  [K]";
+    formula "Real COP": "COP_real = η × COP_Carnot";
+    formula "Cooling COP": "COP_cooling = COP_heating - 1  (energy balance)";
+
+    assert T_hot_k  > 273.15  msg "hot temperature must be above 0°C (273.15 K)";
+    assert T_cold_k > 200.0   msg "cold temperature must be above −73°C (200 K)";
+    assert T_hot_k  > T_cold_k msg "hot side must be warmer than cold side";
+    assert eff      > 0.0     msg "second-law efficiency must be > 0";
+    assert eff      <= 1.0    msg "second-law efficiency cannot exceed 1.0";
+    assert T_lift   >= 5.0    msg "temperature lift < 5 K — heat pump not practical";
+    assert T_lift   <= 80.0   msg "temperature lift > 80 K — verify temperatures in Kelvin";
+
+    output COP_carnot    label "Carnot COP (theoretical max)"  unit "—";
+    output COP_real      label "Real COP (heating)"            unit "—";
+    output COP_cooling   label "Real COP (cooling / EER)"      unit "—";
+    output T_lift        label "Temperature lift"              unit "K";
+    output heat_output_kw label "Heat output per kW input"    unit "kW";
+    output cool_output_kw label "Cooling output per kW input" unit "kW";
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// COOLING LOAD — ASHRAE 140-2017 / ASHRAE Fundamentals 2021
+// Simplified steady-state cooling load calculation for a space
+// Q_cooling = area × w/m² × eff_factor
+// ────────────────────────────────────────────────────────────────────────────
+
+plan_cooling_load(
+    area_m2:    f64,          // conditioned floor area (m²)
+    watt_per_m2: f64 = 100.0, // cooling load density (W/m²) — ASHRAE typical: 80–120 W/m²
+    eff_factor:  f64 = 0.85   // system efficiency / diversity factor (0–1)
+) {
+    meta {
+        standard: "ASHRAE 140-2017 — Standard Method of Test for Building Energy Simulation Programs",
+        source: "ASHRAE Fundamentals 2021 Chapter 18 (cooling load); ASHRAE 140 §5.2",
+        domain: "termica",
+        version: "2.2",
+        note: "Simplified area-method cooling load. For detailed loads use ASHRAE CLTD or HAP software.",
+    }
+
+    // Gross cooling load (W)
+    let Q_gross_w = area_m2 * watt_per_m2;
+
+    // Design cooling load adjusted for efficiency/diversity
+    let Q_design_w = Q_gross_w * eff_factor;
+
+    // In kW
+    let Q_design_kw = Q_design_w / 1000.0;
+
+    // In tons of refrigeration (1 ton = 3.517 kW)
+    let Q_tons = Q_design_kw / 3.517;
+
+    // BTU/h (common HVAC unit in Americas)
+    let Q_btuh = Q_design_w * 3.412;
+
+    // Recommended chiller/AC capacity with 10% oversizing
+    let Q_installed_kw = Q_design_kw * 1.10;
+    let Q_installed_tons = Q_installed_kw / 3.517;
+
+    formula "Cooling load": "Q [W] = area [m²] × load_density [W/m²] × eff_factor";
+    formula "Tons of refrigeration": "Q_tons = Q_kW / 3.517";
+    formula "BTU/h conversion": "Q_BTUh = Q_W × 3.412";
+    formula "Installed capacity": "Q_installed = Q_design × 1.10  (10% oversizing)";
+
+    assert area_m2      > 0.0    msg "floor area must be positive (m²)";
+    assert watt_per_m2  > 0.0    msg "load density must be positive (W/m²)";
+    assert watt_per_m2  <= 500.0 msg "load density > 500 W/m² — verify assumptions";
+    assert eff_factor   > 0.0    msg "efficiency factor must be > 0";
+    assert eff_factor   <= 1.0   msg "efficiency factor cannot exceed 1.0";
+
+    output Q_gross_w        label "Gross cooling load"            unit "W";
+    output Q_design_kw      label "Design cooling load"           unit "kW";
+    output Q_tons           label "Cooling capacity"              unit "TR (tons)";
+    output Q_btuh           label "Cooling capacity"              unit "BTU/h";
+    output Q_installed_kw   label "Recommended installed capacity" unit "kW";
+    output Q_installed_tons label "Recommended installed capacity" unit "TR";
+}

@@ -22,8 +22,8 @@ plan_pump_sizing(
         version: "2.0",
     }
 
-    const GPM_TO_LPS = 0.06309;
-    const PSI_TO_M   = 0.70307;
+    const GPM_TO_LPS = 0.06309;   // 1 GPM = 0.06309 L/s (domain constant — NFPA unit conversion)
+    const PSI_TO_M   = 0.70307;   // 1 PSI = 0.70307 m.c.a. (domain constant — metric head)
 
     let Q_lps    = Q_gpm  * GPM_TO_LPS;
     let H_m      = P_psi  * PSI_TO_M;
@@ -31,6 +31,9 @@ plan_pump_sizing(
     let HP_max   = HP_req * 1.20;      // NFPA 20 §6.7: shutoff ≤ 140% rated HP
     let kW_motor = HP_req * 0.7457;    // motor kW
 
+    formula "HP conversion": "76.04 kgf·m/s = 1 HP (metric — fluid power convention)";
+    formula "GPM conversion": "0.06309 L/s = 1 GPM (US gallon per minute)";
+    formula "PSI to head": "0.70307 m.c.a. = 1 PSI (meters water column)";
     formula "Pump power": "HP = (Q[L/s] × H[m]) / (η × 76.04)";
     formula "NFPA shutoff": "HP_shutoff ≤ 1.40 × HP_rated";
 
@@ -146,6 +149,7 @@ plan_sprinkler_demand(
     let Q_lps  = Q_lpm / 60.0;                    // flow (L/s)
     let Q_gpm  = Q_lps / 0.06309;                 // flow (GPM)
 
+    formula "GPM conversion": "0.06309 L/s = 1 GPM (US gallon per minute)";
     formula "Sprinkler demand": "Q = Area × Density";
 
     assert area_m2 > 0.0       msg "design area must be positive";

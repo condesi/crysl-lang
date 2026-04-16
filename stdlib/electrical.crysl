@@ -27,6 +27,7 @@ plan_voltage_drop(
     }
 
     const RHO_CU = 0.0172;  // copper resistivity Ω·mm²/m at 20°C (IEC 60228)
+    // Domain constant: 0.0172 Ω·mm²/m = resistivity of annealed copper at 20°C
 
     // Round-trip resistance (single-phase, 2 conductors)
     let R_line  = 2.0 * RHO_CU * L_m / A_mm2;
@@ -40,6 +41,7 @@ plan_voltage_drop(
     // Power dissipated in conductor (W)
     let P_loss_w = I * I * R_line;
 
+    formula "Copper resistivity": "ρ = 0.0172 Ω·mm²/m (IEC 60228 — annealed copper at 20°C)";
     formula "Resistance": "R = 2·ρ·L / A  [ρ = 0.0172 Ω·mm²/m for Cu]";
     formula "Voltage drop": "ΔV = R·I  (single-phase round-trip)";
     formula "Drop %": "%ΔV = ΔV / V_nom × 100";
@@ -80,7 +82,7 @@ plan_electrical_3ph(
     }
 
     const SQRT3   = 1.73205;
-    const RHO_CU  = 0.0172;
+    const RHO_CU  = 0.0172;  // copper resistivity Ω·mm²/m at 20°C (IEC 60228)
 
     // Line current (A)
     let I_load   = (P_kw * 1000.0) / (SQRT3 * V * pf);
@@ -100,6 +102,7 @@ plan_electrical_3ph(
     // Conductor power loss (3-phase, 3 conductors)
     let P_loss_w = 3.0 * I_load * I_load * R_cond;
 
+    formula "Copper resistivity": "ρ = 0.0172 Ω·mm²/m (IEC 60228 — annealed copper at 20°C)";
     formula "3-phase current": "I = P / (√3 · V · pf)";
     formula "Apparent power": "S = P / pf";
     formula "3-phase voltage drop": "ΔV = √3 · I · ρ · L / A";

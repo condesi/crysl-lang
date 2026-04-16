@@ -1,201 +1,32 @@
 {
-  "benchmark": "CRYS-L v2.1 — JIT Execution Latency (pure, no HTTP)",
+  "benchmark": "CRYS-L v2.3 — JIT L4 Register ABI + Simulation Engine (real measured)",
   "date": "2026-04-16",
-  "server": "Server5 · Contabo Cloud VPS · AMD EPYC 12-core · 48 GB DDR4-3200 · 500 GB NVMe · Ubuntu 24.04 LTS",
-  "method": "Median of 10,000 iterations after 1,000 warm-up. Pure JIT execution, excludes HTTP/JSON overhead (~80 µs via Nginx). OracleCache disabled for single-plan benchmarks.",
-  "runtime": "CRYS-L v2.1 · Rust 1.78.0 · Cranelift 0.109 · -C opt-level=3 -C target-cpu=native",
-  "note": "C++ baseline: GCC 13.2 -O2 -march=native, inline functions, volatile inputs. Python 3.11.8 scalar functions, no NumPy. LLM: GPT-4 Turbo API mean of 5 calls.",
+  "server": "Server5 · KVM AMD EPYC · 12-core · 48 GB RAM · Ubuntu 24.04 LTS",
+  "method": "Real measured hot-path JIT latency using L4 Register ABI. Simulation engine measured using continuous SoA loop. HTTP loopback measured separately.",
+  "runtime": "CRYS-L v2.3 RC · Rust release build · Cranelift native x86-64 JIT",
 
-  "plans": [
-    {
-      "plan": "plan_pump_sizing",
-      "domain": "fire",
-      "standard": "NFPA 20:2022",
-      "params": { "Q_gpm": 500, "P_psi": 100, "eff": 0.75 },
-      "result_sample": { "hp_required": 16.835, "shutoff_hp": 23.569 },
-      "latency": {
-        "crysl_ns":  842,
-        "cpp_o2_ns": 1900,
-        "python_ns":  41000,
-        "gpt4_s":     12,
-        "vs_python":  "49×",
-        "vs_gpt4":    "14,250,000×"
-      }
-    },
-    {
-      "plan": "plan_sprinkler_system",
-      "domain": "fire",
-      "standard": "NFPA 13:2022",
-      "params": { "area_ft2": 1500, "density": 0.15, "hose_stream": 250 },
-      "result_sample": { "Q_demand_gpm": 475.0, "P_residual_psi": 42.3 },
-      "latency": {
-        "crysl_ns":  1200,
-        "cpp_o2_ns": 2800,
-        "python_ns":  63000,
-        "gpt4_s":     11,
-        "vs_python":  "53×",
-        "vs_gpt4":    "9,200,000×"
-      }
-    },
-    {
-      "plan": "plan_voltage_drop",
-      "domain": "electrical",
-      "standard": "IEC 60364-5-52 / NEC 2023",
-      "params": { "I": 25, "L_m": 50, "A_mm2": 10 },
-      "result_sample": {
-        "V_drop_v": 4.3,
-        "drop_pct": 1.955,
-        "R_line_ohm": 0.086,
-        "P_loss_w": 53.75
-      },
-      "latency": {
-        "crysl_ns":  971,
-        "cpp_o2_ns": 1700,
-        "python_ns":  38000,
-        "gpt4_s":     8,
-        "vs_python":  "39×",
-        "vs_gpt4":    "8,240,000×"
-      }
-    },
-    {
-      "plan": "plan_electrical_3ph",
-      "domain": "electrical",
-      "standard": "IEC 60364 / NEC 2023 / IEEE 141",
-      "params": { "P_kw": 10, "V": 380, "pf": 0.85, "L_m": 100, "A_mm2": 16 },
-      "result_sample": {
-        "I_load_a": 17.874,
-        "S_kva": 11.765,
-        "dV_3ph_v": 3.328,
-        "drop_pct": 0.876,
-        "P_loss_w": 34.34
-      },
-      "latency": {
-        "crysl_ns":  1140,
-        "cpp_o2_ns": 2100,
-        "python_ns":  45000,
-        "gpt4_s":     10,
-        "vs_python":  "39×",
-        "vs_gpt4":    "8,770,000×"
-      }
-    },
-    {
-      "plan": "plan_beam_analysis",
-      "domain": "civil",
-      "standard": "AISC 360-22 / ACI 318-19",
-      "params": { "P_kn": 100, "L_m": 6, "E_gpa": 200, "b_cm": 40, "h_cm": 60 },
-      "result_sample": { "Mmax_kNm": 150.0, "deflection_mm": 3.24 },
-      "latency": {
-        "crysl_ns":  891,
-        "cpp_o2_ns": 2100,
-        "python_ns":  48000,
-        "gpt4_s":     14,
-        "vs_python":  "54×",
-        "vs_gpt4":    "15,700,000×"
-      }
-    },
-    {
-      "plan": "plan_slope_stability",
-      "domain": "civil",
-      "standard": "ASCE 7-22 / Bishop Simplified Method",
-      "params": { "H_m": 8, "VH_ratio": 1.5, "c_kpa": 20, "tan_phi": 0.364, "gamma_kN_m3": 18 },
-      "result_sample": {
-        "sigma_n_kpa": 44.308,
-        "tau_drive_kpa": 66.462,
-        "tau_resist_kpa": 36.128,
-        "FoS": 0.544
-      },
-      "latency": {
-        "crysl_ns":  7600,
-        "cpp_o2_ns": 14000,
-        "python_ns":  290000,
-        "gpt4_s":     13,
-        "vs_python":  "38×",
-        "vs_gpt4":    "1,710,000×"
-      }
-    },
-    {
-      "plan": "plan_planilla_dl728",
-      "domain": "financial",
-      "standard": "DL 728 Peru / EsSalud / ONP",
-      "params": { "sueldo": 5000, "meses_trabajo": 12, "dias_vacac": 15 },
-      "result_sample": {
-        "sueldo_neto_pen": 4350.0,
-        "cts_total_pen": 4998.0,
-        "costo_total_empleador": 7165.0
-      },
-      "latency": {
-        "crysl_ns":  503,
-        "cpp_o2_ns": 1100,
-        "python_ns":  22000,
-        "gpt4_s":     9,
-        "vs_python":  "44×",
-        "vs_gpt4":    "17,900,000×"
-      }
-    },
-    {
-      "plan": "plan_autoclave_cycle",
-      "domain": "medical",
-      "standard": "EN 285:2015 / ISO 17665-1:2006",
-      "params": { "T_c": 121, "t_hold_min": 15, "D_value_min": 1.5, "vol_l": 20, "P_bar": 1.0 },
-      "result_sample": {
-        "F0_value": 15.0,
-        "log_reduction": 10.0,
-        "compliant_iso": true
-      },
-      "latency": {
-        "crysl_ns":  3000,
-        "cpp_o2_ns": 5800,
-        "python_ns":  112000,
-        "gpt4_s":     10,
-        "vs_python":  "37×",
-        "vs_gpt4":    "3,330,000×"
-      }
-    },
-    {
-      "plan": "400_scenario_sweep",
-      "domain": "multi",
-      "standard": "multiple",
-      "params": { "note": "20×20 heatmap, plan_pump_sizing, parallel dispatch 12 cores" },
-      "result_sample": { "scenarios": 400, "total_ns": 337000 },
-      "latency": {
-        "crysl_us":  337,
-        "cpp_o2_us": 800,
-        "python_ms":  16,
-        "gpt4_note": "impractical — $2.40 USD + ~80 min for 400 API calls",
-        "vs_python":  "47×",
-        "vs_gpt4":    "∞"
-      }
-    },
-    {
-      "plan": "oracle_cache_l1_hit",
-      "domain": "all",
-      "standard": "N/A",
-      "params": { "note": "FNV-1a hash lookup, repeated identical inputs, warm cache" },
-      "result_sample": { "effective_latency_ns": 0 },
-      "latency": {
-        "crysl_ns":  0,
-        "cpp_o2_ns": 50,
-        "python_us":  2,
-        "gpt4_note": "N/A",
-        "vs_python":  "∞",
-        "vs_gpt4":    "∞"
-      }
-    }
-  ],
+  "jit_hot_path_ns": {
+    "plan_pump_sizing": 5.37,
+    "plan_sprinkler_system": 9.67,
+    "plan_beam_analysis": 10.69
+  },
 
-  "summary_table": {
-    "columns": ["Plan", "Standard", "CRYS-L JIT", "C++ -O2", "Python 3.11", "GPT-4 Turbo", "vs Python", "vs GPT-4"],
-    "rows": [
-      ["Fire Pump Sizing",    "NFPA 20",        "842 ns",  "~1.9 µs", "~41 µs",  "~12 s",  "49×",  "14,250,000×"],
-      ["Sprinkler System",   "NFPA 13",        "1.2 µs",  "~2.8 µs", "~63 µs",  "~11 s",  "53×",  "9,200,000×"],
-      ["Voltage Drop",       "IEC 60364",      "971 ns",  "~1.7 µs", "~38 µs",  "~8 s",   "39×",  "8,240,000×"],
-      ["3-Phase Load",       "IEC/NEC/IEEE141","1.14 µs", "~2.1 µs", "~45 µs",  "~10 s",  "39×",  "8,770,000×"],
-      ["Beam Analysis",      "AISC 360",       "891 ns",  "~2.1 µs", "~48 µs",  "~14 s",  "54×",  "15,700,000×"],
-      ["Slope Stability",    "ASCE 7-22",      "7.6 µs",  "~14 µs",  "~290 µs", "~13 s",  "38×",  "1,710,000×"],
-      ["Payroll DL728",      "DL 728 Peru",    "503 ns",  "~1.1 µs", "~22 µs",  "~9 s",   "44×",  "17,900,000×"],
-      ["Autoclave EN 285",   "EN 285",         "3.0 µs",  "~5.8 µs", "~112 µs", "~10 s",  "37×",  "3,330,000×"],
-      ["400-Scenario Sweep", "multiple",       "337 µs",  "~800 µs", "~16 ms",  "impractical","47×","∞"],
-      ["OracleCache L1 Hit", "—",              "0 ns",    "~50 ns",  "~2 µs",   "N/A",    "∞",    "∞"]
-    ]
-  }
+  "simulation_engine": {
+    "throughput_scenarios_per_sec": 13000000,
+    "valid_fraction": 0.721,
+    "pareto_size": 507
+  },
+
+  "system_overhead": {
+    "http_loopback_ms": "~2-4",
+    "oracle_cache_probe_ns": "~12"
+  },
+
+  "notes": [
+    "All JIT latencies are hot-path measurements using L4 Register ABI.",
+    "HTTP/API latency includes TCP, HTTP parsing, JSON serialization, and routing.",
+    "Simulation throughput measured on KVM; bare-metal performance may be higher.",
+    "Previous benchmark values (v2.1 paper) used different methodology and are deprecated.",
+    "Current authoritative throughput: 13.0M scenarios/sec (Server5 KVM)."
+  ]
 }

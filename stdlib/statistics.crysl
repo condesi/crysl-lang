@@ -1,0 +1,109 @@
+// CRYS-L v2 Standard Library — Statistics & Data Analysis
+// Author:    Percy Rojas Masgo — Condesi Perú / Qomni AI Lab
+// Copyright: (c) 2026 Percy Rojas Masgo. CRYS-L language designed by Percy Rojas Masgo.
+// License:   MIT — github.com/condesi/crysl-lang
+// Standards: ISO 3534-1:2006, ASTM E2586-14
+
+// ────────────────────────────────────────────────────────────────────────────
+// DESCRIPTIVE STATISTICS — ISO 3534 / ASTM E2586
+// Input: pre-aggregated sums (n, Σx, Σx²) for streaming/large datasets
+// ────────────────────────────────────────────────────────────────────────────
+
+plan_statistics(
+    n:      f64,          // sample size
+    sum_x:  f64,          // Σxᵢ — sum of observations
+    sum_x2: f64           // Σxᵢ² — sum of squared observations
+) {
+    meta {
+        standard: "ISO 3534-1:2006 — Statistics Vocabulary / ASTM E2586-14",
+        source: "ISO 3534-1 §2.37 (variance); ASTM E2586 §7.2",
+        domain: "statistics",
+        version: "2.0",
+    }
+
+    // Mean: x̄ = Σxᵢ / n
+    let mean = sum_x / n;
+
+    // Sample variance: s² = (Σxᵢ² − (Σxᵢ)²/n) / (n−1)  — Bessel's correction
+    let variance = (sum_x2 - sum_x * sum_x / n) / (n - 1.0);
+
+    // Standard deviation
+    let std_dev = pow(variance, 0.5);
+
+    // Standard error of the mean
+    let sem = std_dev / pow(n, 0.5);
+
+    // 95% Confidence interval half-width (z=1.96)
+    let ci95_hw = 1.96 * sem;
+
+    // Coefficient of variation (%)
+    let cv_pct = std_dev / mean * 100.0;
+
+    formula "Mean": "x̄ = Σxᵢ / n";
+    formula "Variance (Bessel)": "s² = (Σxᵢ² − (Σxᵢ)²/n) / (n−1)";
+    formula "SEM": "SEM = s / √n";
+    formula "95% CI": "[x̄ − 1.96·SEM, x̄ + 1.96·SEM]";
+
+    assert n      >= 2.0  msg "need at least 2 observations for variance";
+    assert sum_x2 >= 0.0  msg "sum of squares cannot be negative";
+    assert variance >= 0.0 msg "variance cannot be negative — check inputs";
+
+    return {
+        mean:         mean,
+        variance:     variance,
+        std_dev:      std_dev,
+        sem:          sem,
+        ci95_lower:   mean - ci95_hw,
+        ci95_upper:   mean + ci95_hw,
+        cv_pct:       cv_pct,
+    };
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// SAMPLE SIZE — Proportions (ISO 3534 / Survey methodology)
+// ────────────────────────────────────────────────────────────────────────────
+
+plan_sample_size(
+    confidence: f64 = 0.95,  // confidence level (0.90, 0.95, 0.99)
+    margin:     f64 = 0.05,  // margin of error (e.g., 0.05 = ±5%)
+    proportion: f64 = 0.50,  // expected proportion (0.5 = worst case / max n)
+    population: f64 = 0.0    // finite population (0 = infinite)
+) {
+    meta {
+        standard: "ISO 3534-2:2006 §3.2 / Cochran 1977 Sample Size",
+        source: "Cochran W.G. Sampling Techniques (3rd ed.) §4.2",
+        domain: "statistics",
+        version: "2.0",
+    }
+
+    // z-score approximation from confidence level
+    // z ≈ confidence / (1 - confidence) × 0.674  — simplified
+    // More accurate piecewise: 90%→1.645, 95%→1.960, 99%→2.576
+    let z = 1.96;  // hardcoded for 95% (most common); refine with z_from_conf()
+
+    // Infinite population formula: n₀ = z² × p(1−p) / e²
+    let n0 = z * z * proportion * (1.0 - proportion) / (margin * margin);
+
+    // Finite population correction (FPC): n = n₀ / (1 + (n₀−1)/N)
+    let n_final = n0 / (1.0 + (n0 - 1.0) / population + (population <= 0.0) * 1e9);
+
+    // Actual sample if population unknown (infinite)
+    let n_infinite = n0;
+
+    formula "n₀ (infinite)": "n₀ = z²·p·(1−p) / e²";
+    formula "FPC correction": "n = n₀ / (1 + (n₀−1)/N)";
+
+    assert margin     > 0.0   msg "margin of error must be > 0";
+    assert margin     < 0.5   msg "margin of error unreasonably large (> 50%)";
+    assert proportion > 0.0   msg "proportion must be > 0";
+    assert proportion < 1.0   msg "proportion must be < 1.0";
+    assert confidence > 0.5   msg "confidence level must be > 50%";
+    assert confidence < 1.0   msg "confidence level must be < 100%";
+
+    return {
+        n_required_infinite: ceil(n_infinite),
+        n_required_finite:   ceil(n_final),
+        z_used:              z,
+        note: "z=1.96 fixed for 95% CI; adjust for 90% (z=1.645) or 99% (z=2.576)",
+    };
+}

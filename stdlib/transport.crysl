@@ -1,0 +1,102 @@
+// CRYS-L v2 Standard Library — Transport & Logistics
+// Author:    Percy Rojas Masgo — Condesi Perú / Qomni AI Lab
+// Copyright: (c) 2026 Percy Rojas Masgo. CRYS-L language designed by Percy Rojas Masgo.
+// License:   MIT — github.com/condesi/crysl-lang
+// Standards: Transport Engineering / MTC Peru / CIAT Freight costing
+
+// ────────────────────────────────────────────────────────────────────────────
+// LOGISTICS COST ANALYSIS — MTC Peru / Transport Engineering
+// ────────────────────────────────────────────────────────────────────────────
+
+plan_logistics_cost(
+    distance_km:    f64,          // one-way route distance (km)
+    cost_per_km:    f64 = 2.50,  // operating cost per km (S/), includes fuel+driver
+    n_trips:        f64 = 10.0,  // number of round trips
+    units_per_trip: f64 = 20.0,  // units (pallets/boxes) per trip
+    load_factor:    f64 = 0.85   // vehicle load utilization factor
+) {
+    meta {
+        standard: "MTC Peru D.S. 017-2009-MTC — Reglamento Nacional de Administración de Transporte",
+        source: "MTC §26 tarifas referenciales; CIAT Freight Cost Model 2023",
+        domain: "transport",
+        version: "2.0",
+    }
+
+    // Round-trip distance
+    let dist_rt     = distance_km * 2.0;
+
+    // Total cost per trip (round trip)
+    let cost_per_trip = dist_rt * cost_per_km;
+
+    // Total fleet cost (all trips)
+    let total_cost  = cost_per_trip * n_trips;
+
+    // Effective units transported (adjusted for load factor)
+    let total_units = n_trips * units_per_trip * load_factor;
+
+    // Unit transport cost
+    let cost_unit   = total_cost / total_units;
+
+    // CO₂ estimate (approx 0.21 kg CO₂/km for heavy truck — IPCC AR6)
+    let co2_kg      = dist_rt * n_trips * 0.21;
+
+    formula "Cost/trip": "C_trip = distance_rt × cost/km";
+    formula "Unit cost": "C_unit = Total_cost / (trips × units × load_factor)";
+    formula "CO₂ (truck)": "CO₂ ≈ 0.21 kg/km (IPCC AR6 Appendix 3A)";
+
+    assert distance_km   > 0.0   msg "distance must be positive (km)";
+    assert cost_per_km   > 0.0   msg "cost per km must be positive";
+    assert n_trips       >= 1.0  msg "minimum 1 trip";
+    assert units_per_trip > 0.0  msg "units per trip must be positive";
+    assert load_factor   > 0.0   msg "load factor must be > 0";
+    assert load_factor   <= 1.0  msg "load factor cannot exceed 1.0 (100%)";
+
+    return {
+        cost_per_trip_pen:  cost_per_trip,
+        total_cost_pen:     total_cost,
+        total_units:        total_units,
+        cost_per_unit_pen:  cost_unit,
+        co2_kg_total:       co2_kg,
+        distance_rt_km:     dist_rt,
+    };
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// FUEL CONSUMPTION — MTC Peru / IATA fuel costing
+// ────────────────────────────────────────────────────────────────────────────
+
+plan_fuel_cost(
+    distance_km:   f64,          // total distance (km)
+    consume_l_100: f64 = 32.0,  // fuel consumption (L/100km) — truck default
+    fuel_price:    f64 = 16.50  // fuel price (S//gallon) — Peru Diesel B5 avg 2024
+) {
+    meta {
+        standard: "MTC Peru / OSINERGMIN Precios Combustibles 2024",
+        source: "OSINERGMIN Reporte Semanal Precios Combustibles; MTC Consumos Ref.",
+        domain: "transport",
+        version: "2.0",
+    }
+
+    const L_PER_GAL = 3.785;  // liters per US gallon
+
+    let liters_needed  = distance_km * consume_l_100 / 100.0;
+    let gallons_needed = liters_needed / L_PER_GAL;
+    let fuel_cost_pen  = gallons_needed * fuel_price;
+
+    // Fuel cost per km
+    let fuel_per_km    = fuel_cost_pen / distance_km;
+
+    formula "Consumption": "L = distance × consume / 100";
+    formula "Cost": "Cost = gallons × price_per_gallon";
+
+    assert distance_km   > 0.0   msg "distance must be positive (km)";
+    assert consume_l_100 > 0.0   msg "consumption must be positive (L/100km)";
+    assert fuel_price    > 0.0   msg "fuel price must be positive (S//gal)";
+
+    return {
+        liters_needed:  liters_needed,
+        gallons_needed: gallons_needed,
+        fuel_cost_pen:  fuel_cost_pen,
+        fuel_per_km:    fuel_per_km,
+    };
+}

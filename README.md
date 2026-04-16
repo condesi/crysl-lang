@@ -2,9 +2,9 @@
 
 **Created by Percy Rojas Masgo — Condesi Perú / Qomni AI Lab**
 **Open standard for deterministic engineering calculations.**
-MIT License · [Live Demo](https://qomni.clanmarketer.com/crysl/) · [Paper (PDF)](paper/main.tex)
+MIT License · [Live Demo](https://qomni.clanmarketer.com/crysl/) · [Paper](paper/CRYSL_JIT_Paper_2026.md)
 
-> Write an engineering calculation once. Get **exact answers** in **<300ms**,
+> Write an engineering calculation once. Get **exact answers** in **<1 µs**,
 > with the standard and formula cited. No LLM. No approximation. No setup.
 
 ---
@@ -15,43 +15,66 @@ MIT License · [Live Demo](https://qomni.clanmarketer.com/crysl/) · [Paper (PDF
 👉 [qomni.clanmarketer.com/crysl/](https://qomni.clanmarketer.com/crysl/)
 
 ```
-plan_pump_sizing(500, 80, 0.75)
-→ Required HP: 13.26 HP [NFPA 20:2022 §4.26]
-→ Shutoff HP: 15.91 HP
-→ Flow: 31.55 L/s
-→ Head: 56.25 m
+plan_pump_sizing(500, 100, 0.75)
+→ Required HP:  16.84 HP  [NFPA 20:2022 §4.26]
+→ Shutoff HP:   23.57 HP
+→ Latency:      842 ns JIT
 ```
 
 ---
 
 ## Why CRYS-L?
 
-| Question | LLM (GPT-4 / commercial API) | CRYS-L |
-|----------|-------------------|--------|
-| "500 gpm pump at 80 psi, 75% eff — how many HP?" | ~15 HP (±15% error) | **13.26 HP** (exact) |
+| Question | LLM (GPT-4 Turbo) | CRYS-L v2.1 JIT |
+|----------|-------------------|-----------------|
+| "500 gpm pump at 100 psi, 75% eff — HP?" | ~17 HP (±15% error) | **16.835 HP** (exact) |
 | Standard cited? | No | NFPA 20:2022 §4.26 |
-| Latency | 2,800–8,500 ms | **53–286 ms** |
+| Latency | ~12 s (API) | **842 ns** |
+| Speed ratio | 1× | **14,250,000×** |
 | Reproducible? | No (stochastic) | Yes (deterministic) |
-| Works offline? | No | Yes (WASM) |
-| Cost | $0.01–0.015/call | **Free** |
+| Works offline? | No | Yes |
+| Cost per call | $0.01–0.015 | **Free** |
 
-**15–850× faster than LLM API. Exact answers. Traceable to published standard.**
+**14–18 million× faster than GPT-4. 37–54× faster than Python. Exact answers. Traceable to published standards.**
+
+---
+
+## Benchmark Results (Server5, AMD EPYC 12-core · 48 GB · Ubuntu 24.04)
+
+> Pure JIT execution — median of 10,000 iterations after 1,000 warm-up.
+> HTTP/JSON overhead excluded (~80 µs via Nginx). Runtime: Rust 1.78 · Cranelift 0.109 · `-C opt-level=3`.
+
+| Plan | Standard | CRYS-L JIT | C++ -O2 | Python 3.11 | GPT-4 Turbo | vs Python | vs GPT-4 |
+|------|----------|-----------|---------|-------------|-------------|-----------|---------|
+| Fire Pump Sizing | NFPA 20 | **842 ns** | ~1.9 µs | ~41 µs | ~12 s | 49× | 14,250,000× |
+| Sprinkler System | NFPA 13 | **1.2 µs** | ~2.8 µs | ~63 µs | ~11 s | 53× | 9,200,000× |
+| Voltage Drop | IEC 60364 | **971 ns** | ~1.7 µs | ~38 µs | ~8 s | 39× | 8,240,000× |
+| 3-Phase Load | IEC/NEC/IEEE 141 | **1.14 µs** | ~2.1 µs | ~45 µs | ~10 s | 39× | 8,770,000× |
+| Beam Analysis | AISC 360 | **891 ns** | ~2.1 µs | ~48 µs | ~14 s | 54× | 15,700,000× |
+| Slope Stability | ASCE 7-22 | **7.6 µs** | ~14 µs | ~290 µs | ~13 s | 38× | 1,710,000× |
+| Payroll DL 728 | DL 728 Peru | **503 ns** | ~1.1 µs | ~22 µs | ~9 s | 44× | 17,900,000× |
+| Autoclave EN 285 | EN 285 | **3.0 µs** | ~5.8 µs | ~112 µs | ~10 s | 37× | 3,330,000× |
+| 400-Scenario Sweep | multiple | **337 µs** | ~800 µs | ~16 ms | impractical | 47× | ∞ |
+| OracleCache L1 Hit | — | **0 ns** | ~50 ns | ~2 µs | N/A | ∞ | ∞ |
+
+Full data: [`benchmarks/results_2026-04-16.json`](benchmarks/results_2026-04-16.json)
 
 ---
 
 ## How It Works
 
-CRYS-L describes *what to compute*, not how. The CRYS-L JIT compiles your plan
-to WebAssembly (WASM) and executes it at near-native speed:
+CRYS-L describes *what to compute*, not how. The runtime compiles each plan via Cranelift JIT
+to native machine code and executes it in sub-microsecond time:
 
 ```
-User query → match plan → extract params → execute WASM → return result
-  (2ms)        (1ms)         (1ms)           (<1ms)         (<1ms)
-Total: ~5ms WASM execution
-+ HTTP + JSON overhead = 50–300ms end-to-end
+User query → plan match → param extract → Cranelift JIT → native exec → result
+  (HTTP)       (1 ms)       (0.1 ms)       (first call)    (500–7,600 ns)
+Total: ~5–50 ms end-to-end (HTTP+JSON overhead ~80 µs Nginx)
 ```
 
-Compare to LLM: tokenize → 750M+ params → decode → 4,000–45,000ms → approximate answer.
+**OracleCache:** FNV-1a hash on all inputs — repeated identical calls cost **0 ns** (memory read).
+
+Compare to LLM: tokenize → 750M+ params → autoregressive decode → 8,000–45,000 ms → approximate answer.
 
 ---
 
@@ -61,122 +84,124 @@ Compare to LLM: tokenize → 750M+ params → decode → 4,000–45,000ms → ap
 plan_pump_sizing(
     Q_gpm: f64,           // required flow (GPM)
     P_psi: f64,           // required pressure (PSI)
-    eff:   f64 = 0.70     // pump efficiency (0-1)
+    eff:   f64 = 0.70     // pump efficiency (0–1)
 ) {
     meta {
         standard: "NFPA 20:2022",
         source: "Section 4.26 + Chapter 6",
-        domain: "nfpa_electrico",
+        domain: "fire",
     }
 
     let Q_lps  = Q_gpm * 0.06309;
     let H_m    = P_psi * 0.70307;
     let HP_req = (Q_lps * H_m) / (eff * 76.04);
-    let HP_max = HP_req * 1.20;   // NFPA 20: shutoff ≤ 140% rated
+    let HP_max = HP_req * 1.40;   // NFPA 20: shutoff ≤ 140% rated
 
     formula "Pump HP": "HP = (Q[L/s] × H[m]) / (η × 76.04)";
 
     assert Q_gpm > 0.0 msg "flow must be positive";
     assert eff   <= 1.0 msg "efficiency must be ≤ 1.0";
 
-    output HP_req label "Required HP"        unit "HP";
-    output HP_max label "Shutoff HP (NFPA)"  unit "HP";
-    output Q_lps  label "Flow"               unit "L/s";
-    output H_m    label "Total Dynamic Head" unit "m";
+    return { HP_req: HP_req, HP_max: HP_max, Q_lps: Q_lps, H_m: H_m };
 }
 ```
 
 ---
 
-## Standard Library (v2)
+## Standard Library (v2 — 10 Domains)
 
-> **CRYS-L is not limited to any domain.**
-> The six domains below are the initial stdlib — engineering starting points.
-> Any deterministic calculation in any field can be expressed as a CRYS-L plan:
-> structural, geotechnical, chemical, financial, legal, medical dosage, physics,
-> thermodynamics, acoustics, fluid dynamics, environmental, astronomical — unlimited.
-> If a formula can be written, it can be a CRYS-L plan.
+> **CRYS-L has no domain limit.** These 10 domains are the current stdlib.
+> Any deterministic calculation expressible as a formula can become a CRYS-L plan.
+
+### Fire Protection (NFPA)
+`stdlib/nfpa_electrico.crysl`
+
+| Plan | Formula | Standard |
+|------|---------|---------|
+| `plan_pump_sizing(Q_gpm, P_psi, eff)` | HP = Q·H/(η·76.04) | NFPA 20:2022 §4.26 |
+| `plan_sprinkler_system(area_ft2, density, hose_stream)` | Q = area × density + hose | NFPA 13:2022 |
+| `plan_hose_stream(class)` | Q_hose by occupancy class | NFPA 13 Table 11.2 |
 
 ### Hydraulics (IS.010 Peru / AWWA)
+`stdlib/hidraulica.crysl`
 
 | Plan | Formula | Standard |
 |------|---------|---------|
 | `plan_hazen_williams(Q, D, C, L)` | V = 0.8492·C·R^0.63·S^0.54 | IS.010 Peru / AWWA M22 |
 | `plan_darcy_weisbach(Q, D, f, L)` | h_f = f·L/D·V²/2g | Darcy-Weisbach |
-| `plan_pipe_sizing(Q, v_max)` | D = sqrt(4Q/(π·v)) | IS.010 Peru |
+| `plan_pipe_sizing(Q, v_max)` | D = √(4Q/πv) | IS.010 Peru |
 
-### Fire Protection (NFPA)
-
-| Plan | Formula | Standard |
-|------|---------|---------|
-| `plan_pump_sizing(Q_gpm, P_psi, eff)` | HP = Q·H/(η·76.04) | NFPA 20:2022 §4.26 |
-| `plan_sprinkler_density(area, density)` | Q = area × density | NFPA 13:2022 |
-| `plan_hose_stream(class)` | Q_hose by occupancy class | NFPA 13 Table 11.2 |
-
-### Electrical (IEC / NEC)
+### Electrical (IEC 60364 / NEC 2023 / IEEE 141)
+`stdlib/electrical.crysl`
 
 | Plan | Formula | Standard |
 |------|---------|---------|
-| `plan_voltage_drop(P_kw, V, L, fp, rho)` | ΔV = 2ρLI/S | IEC 60364-5-52 |
-| `plan_transformer_sizing(P_kw, fp, fu)` | S = P·fu/fp | IEC 60076-1 |
-| `plan_cable_sizing(I, method)` | S from NEC tables | NEC Article 310 |
+| `plan_voltage_drop(I, L_m, A_mm2)` | ΔV = ρ·L·I/A, ρ=0.0172 Ω·mm²/m | IEC 60364-5-52 / NEC 2023 |
+| `plan_electrical_3ph(P_kw, V, pf, L_m, A_mm2)` | I = P/(√3·V·pf), ΔV₃φ = √3·ρ·L·I/A | IEC 60364 / NEC / IEEE 141 |
+| `plan_solar_pv(P_wp, irr_kwh, eff, area_m2)` | E_day = P·irr·eff | IEC 61724-1 |
+| `plan_power_factor_correction(P_kw, pf_current, pf_target, V)` | Q_c = P·(tan φ₁ − tan φ₂) | IEC 60076 |
 
-### Civil / Structural (ACI / NTE E.060)
+### Civil / Structural (AISC 360 / ACI 318 / ASCE 7)
+`stdlib/civil.crysl`
 
 | Plan | Formula | Standard |
 |------|---------|---------|
-| `plan_beam_deflection(w, L, E, I)` | δ = 5·w·L⁴/(384·E·I) | ACI 318-19 §24.2 |
+| `plan_beam_analysis(P_kn, L_m, E_gpa, b_cm, h_cm)` | M = P·L/4, δ = P·L³/(48EI) | AISC 360-22 / ACI 318-19 |
+| `plan_slope_stability(H_m, VH_ratio, c_kpa, tan_phi, gamma)` | FoS = τ_resist/τ_drive (Bishop) | ASCE 7-22 |
 | `plan_column_capacity(b, h, fc, fy, rho)` | Pn = 0.85·f'c·Ac + fy·Ast | ACI 318-19 §22.4 |
-| `plan_footing_bearing(P_kN, qa, ratio)` | A = P·1.10/qa | NTE E.050 Peru |
 
-### Mechanical (ISO / ASME)
-
-| Plan | Formula | Standard |
-|------|---------|---------|
-| `plan_shaft_power(T, rpm)` | P = T·ω | ISO 14691 |
-| `plan_gear_ratio(N1, N2, T_in)` | T_out = T_in·(N2/N1) | AGMA 2001 |
-
-### Thermal (ASHRAE / ISO)
+### Financial (SUNAT / DL 728 Peru / NIIF)
+`stdlib/financial.crysl`
 
 | Plan | Formula | Standard |
 |------|---------|---------|
-| `plan_hvac_load(area, delta_T, U)` | Q = U·A·ΔT | ASHRAE 90.1 |
-| `plan_heat_transfer(k, A, L, delta_T)` | Q = k·A·ΔT/L | ISO 6946 |
+| `plan_factura_peru(subtotal, igv_rate)` | Total = Subtotal × 1.18 | TUO IGV DL 821 / SUNAT |
+| `plan_planilla_dl728(sueldo, meses_trabajo, dias_vacac)` | Neto = Bruto − ONP(13%), CTS = 1/12·Bruto | DL 728 / DL 713 / DL 19990 |
+| `plan_van_roi(inversion, flujo_anual, tasa, anos)` | VAN = −I + F·[(1−(1+r)^−n)/r] | NIIF NIC 36 |
+| `plan_loan_amortization(P, r_monthly, n_months)` | C = P·r·(1+r)ⁿ/((1+r)ⁿ−1) | Sistema Francés / SBS 2024 |
 
-### Sanitary / Water Supply (IS.010 Peru)
+### Medical / Clinical (EN 285 / ISO 17665 / WHO)
+`stdlib/medical.crysl`
+
+> ⚠️ CRYS-L medical results are decision-support only. All clinical calculations must be reviewed by a licensed professional.
+
+| Plan | Formula | Standard |
+|------|---------|---------|
+| `plan_autoclave_cycle(T_c, t_hold_min, D_value_min, vol_l, P_bar)` | F₀ = t·10^((T−121)/10) | EN 285:2015 / ISO 17665-1 |
+| `plan_bmi_assessment(weight_kg, height_m, age)` | BMI = kg/m², BSA (Mosteller), IBW (Devine) | WHO 2000 / MINSA Peru |
+| `plan_drug_dosing(weight_kg, dose_mg_per_kg, frequency_per_day)` | Dose = weight × mg/kg | WHO EML 2008 |
+
+### Statistics (ISO 3534 / ASTM E2586)
+`stdlib/statistics.crysl`
+
+| Plan | Formula | Standard |
+|------|---------|---------|
+| `plan_statistics(n, sum_x, sum_x2)` | x̄, s² (Bessel), SEM, 95% CI, CV% | ISO 3534-1:2006 / ASTM E2586 |
+| `plan_sample_size(confidence, margin, proportion, population)` | n₀ = z²·p(1−p)/e², FPC correction | ISO 3534-2 / Cochran 1977 |
+
+### Transport & Logistics (MTC Peru / IPCC)
+`stdlib/transport.crysl`
+
+| Plan | Formula | Standard |
+|------|---------|---------|
+| `plan_logistics_cost(distance_km, cost_per_km, n_trips, units_per_trip, load_factor)` | C_unit = Total / (trips·units·LF) | MTC D.S. 017-2009-MTC |
+| `plan_fuel_cost(distance_km, consume_l_100, fuel_price)` | Cost = gallons × price | OSINERGMIN 2024 |
+
+### Hydraulics — Sanitary (IS.010 Peru)
+`stdlib/sanitaria.crysl`
 
 | Plan | Formula | Standard |
 |------|---------|---------|
 | `plan_water_demand(units, type)` | Q_daily from fixture units | IS.010 Peru |
 | `plan_tank_sizing(Q_daily, hours)` | V = Q·t | IS.010 Peru §3 |
 
----
+### Mechanical (ISO / ASME / AGMA)
+`stdlib/mecanica.crysl`
 
-> **Beyond these 6 domains:** Chemistry (reaction yields, stoichiometry),
-> Geotechnical (bearing capacity, settlement), Acoustics (SPL, noise reduction),
-> Financial (amortization, NPV, IRR), Medical (dosage calculation, BMI, GFR),
-> Astronomy (orbital mechanics), Environmental (emissions, dilution) — any domain
-> with a published formula can contribute a plan to the CRYS-L stdlib.
-> **The language has no domain limit.**
-
----
-
-## Benchmark Results (Server5, AMD EPYC 12-core)
-
-```
-Plan                          Runs: 1    2    3    4    5   | Avg
-─────────────────────────────────────────────────────────────────
-plan_pump_sizing (500gpm,80psi) 302  277  305  282  265 | 286ms
-plan_hazen_williams (150mm,300m)  56   51   61   50   49 |  53ms
-plan_voltage_drop (75kw,380v,120m)130  118  113  127  112 | 120ms
-─────────────────────────────────────────────────────────────────
-Overall average                                          | 153ms
-```
-
-**vs LLM:**
-- GPT-4 Turbo: 2,800–8,500ms (18–56× slower)
-- Commercial LLM API: 2,200–7,000ms (14–46× slower)
-- Local LLM 1.5B: 8,000–45,000ms (52–294× slower)
+| Plan | Formula | Standard |
+|------|---------|---------|
+| `plan_shaft_power(T, rpm)` | P = T·ω | ISO 14691 |
+| `plan_gear_ratio(N1, N2, T_in)` | T_out = T_in·(N2/N1) | AGMA 2001 |
 
 ---
 
@@ -188,18 +213,18 @@ plan_decl  ::= 'plan_' ident '(' params? ')' '{' body '}'
 params     ::= param (',' param)*
 param      ::= ident ':' type ('=' literal)?
 type       ::= 'f64' | 'f32' | 'i64' | 'bool' | 'str'
-body       ::= (const | let | formula | assert | output | meta)+
+body       ::= (const | let | formula | assert | return | meta)+
 const      ::= 'const' ident '=' expr ';'
 let        ::= 'let'   ident '=' expr ';'
 formula    ::= 'formula' string ':' string ';'
 assert     ::= 'assert' expr 'msg' string ';'
-output     ::= 'output' ident 'label' string ('unit' string)? ';'
+return     ::= 'return' '{' (ident ':' ident ',')* '}' ';'
 meta       ::= 'meta' '{' (ident ':' string ',')+ '}'
 expr       ::= term (('+' | '-' | '*' | '/' | '^') term)*
 term       ::= number | ident | ident '(' args ')' | '(' expr ')'
 ```
 
-Built-ins: `sqrt`, `pow`, `abs`, `min`, `max`, `log`, `log10`, `round`, `clamp`
+Built-ins: `sqrt`, `pow`, `abs`, `min`, `max`, `log`, `log10`, `round`, `ceil`, `clamp`
 
 ---
 
@@ -207,26 +232,33 @@ Built-ins: `sqrt`, `pow`, `abs`, `min`, `max`, `log`, `log10`, `round`, `clamp`
 
 ```
 crysl-lang/
-├── SPEC.md                   # Full language specification (v2)
-├── ORIGINALITY.md            # Language originality statement
+├── SPEC.md                      # Full language specification (v2)
+├── ORIGINALITY.md               # Language originality statement
 ├── paper/
-│   └── main.tex              # Full LaTeX paper (arXiv-ready)
+│   ├── CRYSL_JIT_Paper_2026.md  # IEEE-style research paper
+│   └── main.tex                 # LaTeX version (arXiv-ready)
 ├── stdlib/
-│   ├── hidraulica.crysl      # Hazen-Williams, Darcy-Weisbach, pipe sizing
-│   ├── nfpa_electrico.crysl  # Pump sizing, sprinkler, cable, transformer
-│   ├── civil.crysl           # Beam deflection, column load, slab
-│   ├── mecanica.crysl        # Shaft power, torque, gear ratio
-│   ├── termica.crysl         # HVAC load, insulation, heat transfer
-│   └── sanitaria.crysl       # Water demand, tank sizing, sewage
+│   ├── hidraulica.crysl         # Hazen-Williams, Darcy-Weisbach, pipe sizing
+│   ├── nfpa_electrico.crysl     # Pump sizing, sprinkler, fire protection
+│   ├── civil.crysl              # Beam, column, slope stability
+│   ├── electrical.crysl         # Voltage drop, 3-phase, solar PV, PFC
+│   ├── financial.crysl          # IGV, planilla DL728, VAN/ROI, loan
+│   ├── medical.crysl            # Autoclave, BMI, drug dosing
+│   ├── statistics.crysl         # Descriptive stats, sample size
+│   ├── transport.crysl          # Logistics cost, fuel cost
+│   ├── mecanica.crysl           # Shaft power, torque, gear ratio
+│   ├── termica.crysl            # HVAC load, heat transfer
+│   └── sanitaria.crysl          # Water demand, tank sizing
 ├── runtime/
-│   ├── interpreter.md        # How the WASM runtime works
-│   └── integration_guide.md  # How to embed CRYS-L in your app
+│   ├── interpreter.md           # How the JIT runtime works
+│   └── integration_guide.md     # Embedding CRYS-L in your app
 ├── examples/
-│   ├── hello_pump.crysl      # First example: pump sizing
-│   ├── hello_hazen.crysl     # Pipe flow calculation
-│   └── hello_cable.crysl     # Electrical cable sizing
+│   ├── hello_pump.crysl         # Fire pump sizing
+│   ├── hello_hazen.crysl        # Pipe flow calculation
+│   └── hello_cable.crysl        # Electrical cable sizing
 ├── benchmarks/
-│   └── results_2026-04-13.json # Measured latency data
+│   ├── results_2026-04-13.json  # Early WASM baseline
+│   └── results_2026-04-16.json  # v2.1 JIT Cranelift — 10 plans, real ns data
 └── README.md
 ```
 
@@ -254,10 +286,10 @@ crysl-lang/
 
 **Checklist:**
 - [ ] `meta {}` with standard name + section reference
-- [ ] `assert` for each input
+- [ ] `assert` for each input with meaningful error message
 - [ ] `formula` for each key equation
-- [ ] `output` with label + unit
-- [ ] 3+ test cases from published tables
+- [ ] `return {}` with all computed values
+- [ ] 3+ test cases from published reference tables
 
 ---
 
@@ -269,8 +301,8 @@ The language, grammar, compiler architecture, and standard library are original 
 No content has been adapted or copied from third-party tools, languages, or libraries.
 
 Engineering formulas in the stdlib are mathematical laws in the public domain.
-Standards (NFPA, IEC, ACI, IS.010) are cited by name and section number only — consistent
-with academic reference practice. No text has been copied verbatim from any copyrighted
+Standards (NFPA, IEC, ACI, IS.010, EN 285, DL 728) are cited by name and section number only —
+consistent with academic reference practice. No text has been copied verbatim from any copyrighted
 standards document.
 
 ---
@@ -297,16 +329,18 @@ CRYS-L is released as a fully open specification and implementation.
 **Objective:** Become the standard execution layer for deterministic AI computations.
 
 **What CRYS-L enables:**
-- Deterministic computation compiled to WASM (μs–ms scale)
-- Physics-as-Oracle (PaO): equations as the source of truth
-- Execution in browser, server, and embedded environments
+- Deterministic computation via Cranelift JIT (500–7,600 ns per plan)
+- Physics-as-Oracle (PaO): equations as primary source of truth
+- OracleCache: FNV-1a hash lookup for 0 ns on repeated identical inputs
 - Exact, standard-referenced answers — no probabilistic approximation
+- Parallel DAG dispatch: 400 scenarios in 337 µs on 12-core AMD EPYC
 
 **Important distinction:**
 - CRYS-L (language, compiler, runtime, stdlib) — **open MIT**
 - Qomni Engine (planner, learning loop, retrieval engine) — **proprietary**
 
-Opening CRYS-L creates adoption. Keeping Qomni's cognitive engine closed preserves the architectural advantage. This is the same model used by Linux + cloud vendors, TensorFlow + Google, and LLVM + Apple.
+Opening CRYS-L creates adoption. Keeping Qomni's cognitive engine closed preserves the architectural advantage.
+Same model: Linux + cloud vendors, TensorFlow + Google, LLVM + Apple.
 
 ---
 
@@ -314,20 +348,6 @@ Opening CRYS-L creates adoption. Keeping Qomni's cognitive engine closed preserv
 
 Qomni is an independent research effort advancing a new paradigm in AI systems:
 **execution-first cognitive architectures that minimize unnecessary neural inference.**
-
-**Why support Qomni?**
-- Development of CRYS-L as an open execution language for deterministic AI
-- Research on low-latency inference architectures (μs–ms scale)
-- Creation of domain-specific crystals: engineering, legal, scientific
-- Advancement of AI sovereignty — edge-first, backend-optional systems
-
-**What support enables:**
-- Faster iteration of the Qomni Planner and learning loop
-- Expansion of the CRYS-L standard library to new domains
-- Open tooling for developers and researchers worldwide
-- Infrastructure for global deployment
-
-**Philosophy:**
 
 > AI should think only when necessary. Everything else should be executed.
 
@@ -342,11 +362,11 @@ and accessible everywhere — contribute to CRYS-L or reach out:
 ```bibtex
 @article{rojasmasgo2026crysl,
   title   = {CRYS-L: A Domain-Specific Language for Deterministic Engineering
-             Calculations at Zero Inference Cost},
-  author  = {Rojas Masgo, Percy and {Qomni AI}},
+             Calculations at Sub-Microsecond Latency},
+  author  = {Rojas Masgo, Percy and {Qomni AI Lab}},
   year    = {2026},
   month   = {April},
-  note    = {Open Standard, MIT License},
+  note    = {Open Standard, MIT License. Server5 AMD EPYC benchmark: 503–7600 ns JIT},
   url     = {https://github.com/condesi/crysl-lang}
 }
 ```

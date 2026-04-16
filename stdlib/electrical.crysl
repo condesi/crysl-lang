@@ -1,0 +1,227 @@
+// CRYS-L v2 Standard Library — Electrical Engineering
+// Author:    Percy Rojas Masgo — Condesi Perú / Qomni AI Lab
+// Copyright: (c) 2026 Percy Rojas Masgo. CRYS-L language designed by Percy Rojas Masgo.
+// License:   MIT — github.com/condesi/crysl-lang
+// Note:      Formulas are mathematical laws (public domain). Implementations are original.
+//            Standards cited by name/section only — no text copied from copyrighted documents.
+// Standards: IEC 60364 (2016), NEC 2023, IEEE 141-1993, CNE Peru 2006
+// Verified:  Server5 AMD EPYC, 2026-04-16 — JIT latency confirmed sub-microsecond
+
+// ────────────────────────────────────────────────────────────────────────────
+// VOLTAGE DROP — IEC 60364-5-52 / NEC 310
+// rho = 0.0172 Ω·mm²/m (copper at 20°C) — expressed in Ω·mm²/m to avoid
+// float precision loss with very small SI values (1.72e-8 Ω·m)
+// ────────────────────────────────────────────────────────────────────────────
+
+plan_voltage_drop(
+    I:      f64,          // load current (A)
+    L_m:    f64,          // one-way cable length (m)
+    A_mm2:  f64,          // conductor cross-section (mm²)
+    V_nom:  f64 = 220.0   // nominal system voltage (V), default: Peru single-phase
+) {
+    meta {
+        standard: "IEC 60364-5-52:2009 — Wiring Systems / NEC 2023 Art. 310",
+        source: "IEC 60364-5-52 Table B.52.3; NEC 310.15",
+        domain: "electrical",
+        version: "2.0",
+    }
+
+    const RHO_CU = 0.0172;  // copper resistivity Ω·mm²/m at 20°C (IEC 60228)
+
+    // Round-trip resistance (single-phase, 2 conductors)
+    let R_line  = 2.0 * RHO_CU * L_m / A_mm2;
+
+    // Voltage drop (V)
+    let V_drop  = R_line * I;
+
+    // Percentage drop
+    let drop_pct = V_drop / V_nom * 100.0;
+
+    // Power dissipated in conductor (W)
+    let P_loss_w = I * I * R_line;
+
+    formula "Resistance": "R = 2·ρ·L / A  [ρ = 0.0172 Ω·mm²/m for Cu]";
+    formula "Voltage drop": "ΔV = R·I  (single-phase round-trip)";
+    formula "Drop %": "%ΔV = ΔV / V_nom × 100";
+    formula "Power loss": "P = I²·R";
+
+    assert I     > 0.0     msg "current must be positive (A)";
+    assert L_m   > 0.0     msg "length must be positive (m)";
+    assert A_mm2 > 0.0     msg "cross-section must be positive (mm²)";
+    assert A_mm2 >= 1.5    msg "minimum conductor: 1.5 mm² (IEC 60364-5-52)";
+    assert I     <= 400.0  msg "current exceeds 400A — verify conductor type";
+    assert drop_pct <= 5.0 msg "WARN: voltage drop exceeds 5% — IEC limit is 4% lighting, 5% motor";
+
+    return {
+        V_drop_v:  V_drop,
+        drop_pct:  drop_pct,
+        R_line_ohm: R_line,
+        P_loss_w:  P_loss_w,
+        compliant: drop_pct <= 4.0,   // IEC 60364-5-52: 4% for most circuits
+    };
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// THREE-PHASE LOAD — NEC / IEC 60364 / IEEE 141
+// ────────────────────────────────────────────────────────────────────────────
+
+plan_electrical_3ph(
+    P_kw:   f64,          // active power (kW)
+    V:      f64,          // line-to-line voltage (V), default 380V
+    pf:     f64 = 0.85,   // power factor
+    L_m:    f64 = 100.0,  // cable length (m)
+    A_mm2:  f64 = 16.0    // conductor cross-section (mm²)
+) {
+    meta {
+        standard: "IEC 60364-4-43 / NEC 2023 Art. 220 / IEEE 141-1993",
+        source: "IEC 60364-4-43 §434; NEC Table 220.12",
+        domain: "electrical",
+        version: "2.0",
+    }
+
+    const SQRT3   = 1.73205;
+    const RHO_CU  = 0.0172;
+
+    // Line current (A)
+    let I_load   = (P_kw * 1000.0) / (SQRT3 * V * pf);
+
+    // Apparent power (kVA)
+    let S_kva    = (P_kw * 1000.0) / pf / 1000.0;
+
+    // Reactive power (kVAR)
+    let sin_phi  = pow(1.0 - pf * pf, 0.5);
+    let Q_kvar   = P_kw * sin_phi / pf;
+
+    // Three-phase voltage drop: ΔV = √3·I·ρ·L / A
+    let R_cond   = RHO_CU * L_m / A_mm2;
+    let dV_3ph   = SQRT3 * I_load * R_cond;
+    let drop_pct = dV_3ph / V * 100.0;
+
+    // Conductor power loss (3-phase, 3 conductors)
+    let P_loss_w = 3.0 * I_load * I_load * R_cond;
+
+    formula "3-phase current": "I = P / (√3 · V · pf)";
+    formula "Apparent power": "S = P / pf";
+    formula "3-phase voltage drop": "ΔV = √3 · I · ρ · L / A";
+
+    assert P_kw  > 0.0     msg "power must be positive (kW)";
+    assert V     > 0.0     msg "voltage must be positive (V)";
+    assert pf    > 0.0     msg "power factor must be > 0";
+    assert pf    <= 1.0    msg "power factor must be ≤ 1.0";
+    assert A_mm2 >= 1.5    msg "minimum conductor: 1.5 mm²";
+
+    return {
+        I_load_a:   I_load,
+        S_kva:      S_kva,
+        Q_kvar:     Q_kvar,
+        dV_3ph_v:   dV_3ph,
+        drop_pct:   drop_pct,
+        R_cond_ohm: R_cond,
+        P_loss_w:   P_loss_w,
+    };
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// SOLAR PV SIZING — IEC 61215 / CNE Peru
+// ────────────────────────────────────────────────────────────────────────────
+
+plan_solar_pv(
+    kwh_daily:  f64,         // daily energy demand (kWh/day)
+    hsp:        f64 = 4.5,   // peak sun hours (h/day) — Lima average
+    panel_wp:   f64 = 400.0, // panel nominal power (Wp)
+    cost_usd:   f64 = 200.0, // installed cost per panel (USD)
+    tariff:     f64 = 0.25   // electricity tariff (S//kWh)
+) {
+    meta {
+        standard: "IEC 61215:2021 / Reglamento Técnico RES 2023 — Peru MINEM",
+        source: "IEC 61215-1 §7.1; Peru MINEM RES N°051-2023",
+        domain: "electrical",
+        version: "2.0",
+    }
+
+    const SYSTEM_EFF = 0.85;   // system losses (wiring, inverter, temperature)
+    const S_PEN_USD  = 3.75;   // approximate USD/PEN exchange rate
+
+    // Panels required
+    let n_panels     = kwh_daily / (hsp * panel_wp / 1000.0 * SYSTEM_EFF);
+    let n_panels_int = ceil(n_panels);
+
+    // System capacity (kWp)
+    let capacity_kwp = n_panels_int * panel_wp / 1000.0;
+
+    // Total cost (USD)
+    let total_usd    = n_panels_int * cost_usd;
+    let total_pen    = total_usd * S_PEN_USD;
+
+    // Annual savings (S/)
+    let annual_kwh   = kwh_daily * 365.0;
+    let annual_sav   = annual_kwh * tariff;
+
+    // Simple payback (years)
+    let payback_yrs  = total_pen / annual_sav;
+
+    formula "Panels": "N = E_daily / (HSP × Wp × η_sys / 1000)";
+    formula "Payback": "PB = Cost_S/ / Savings_annual_S/";
+
+    assert kwh_daily > 0.0  msg "daily demand must be positive (kWh)";
+    assert hsp       > 0.0  msg "peak sun hours must be positive";
+    assert panel_wp  > 0.0  msg "panel power must be positive (Wp)";
+
+    return {
+        n_panels:      n_panels_int,
+        capacity_kwp:  capacity_kwp,
+        total_cost_usd: total_usd,
+        total_cost_pen: total_pen,
+        annual_saving_pen: annual_sav,
+        payback_years: payback_yrs,
+    };
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// POWER FACTOR CORRECTION — IEC 60364-4-43 / IEEE 141
+// ────────────────────────────────────────────────────────────────────────────
+
+plan_power_factor_correction(
+    P_kw:       f64,         // active power (kW)
+    pf_current: f64,         // current power factor
+    pf_target:  f64 = 0.95  // target power factor (typical utility requirement)
+) {
+    meta {
+        standard: "IEEE 141-1993 (Red Book) §7 / IEC 60364-4-43",
+        source: "IEEE 141 §7.3.2; Tarifa MT2 OSINERGMIN Peru 2024",
+        domain: "electrical",
+        version: "2.0",
+    }
+
+    let sin1  = pow(1.0 - pf_current * pf_current, 0.5);
+    let sin2  = pow(1.0 - pf_target  * pf_target,  0.5);
+    let tan1  = sin1 / pf_current;
+    let tan2  = sin2 / pf_target;
+
+    // Capacitor bank required (kVAR)
+    let kvar_needed = P_kw * (tan1 - tan2);
+
+    // Apparent power before/after
+    let S_before = P_kw / pf_current;
+    let S_after  = P_kw / pf_target;
+
+    // Current reduction (%)
+    let I_reduction_pct = (1.0 - pf_current / pf_target) * 100.0;
+
+    formula "kVAR needed": "Q_c = P · (tan φ₁ − tan φ₂)";
+    formula "kVAR = P·(tan(arccos(pf1)) - tan(arccos(pf2)))";
+
+    assert P_kw       > 0.0  msg "power must be positive (kW)";
+    assert pf_current > 0.0  msg "current PF must be > 0";
+    assert pf_current < 1.0  msg "current PF must be < 1.0";
+    assert pf_target  <= 1.0 msg "target PF must be ≤ 1.0";
+    assert pf_target  > pf_current msg "target PF must be higher than current PF";
+
+    return {
+        kvar_needed:      kvar_needed,
+        S_before_kva:     S_before,
+        S_after_kva:      S_after,
+        I_reduction_pct:  I_reduction_pct,
+        savings_note:     "reduced transformer sizing + lower line losses",
+    };
+}

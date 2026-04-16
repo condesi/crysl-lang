@@ -48,6 +48,41 @@ A single `.crysl` file may contain multiple `plan_*` declarations.
 
 ---
 
+> ### Quick Start for Engineers (non-programmers)
+>
+> You do not need to know Rust, Python, or any programming language to write a CRYS-L plan.
+> If you can write an engineering formula in a spreadsheet, you can write a CRYS-L plan.
+>
+> **Minimal viable plan — 10 lines with annotations:**
+>
+> ```crysl
+> plan_pipe_velocity(            // 1. Name your calculation
+>     Q_lps: f64,                // 2. Declare inputs with type (f64 = decimal number)
+>     D_mm:  f64                 // 3. One input per line; add a comment explaining units
+> ) {
+>     meta {                     // 4. Required: cite the standard you are using
+>         standard: "IS.010 Peru — Instalaciones Sanitarias",
+>         source:   "IS.010:2006 §3",
+>         domain:   "hidraulica",
+>         version:  "2.2",
+>     }
+>     let D_m = D_mm / 1000.0;              // 5. Convert units (mm → m)
+>     let A   = 3.14159 * D_m * D_m / 4.0; // 6. Compute intermediate values
+>     let V   = Q_lps / (A * 1000.0);       // 7. Final result (m/s)
+>     formula "Velocity": "V = Q / A";      // 8. Document the formula (required for PR)
+>     assert Q_lps > 0.0 msg "flow must be positive";  // 9. Validate each input
+>     assert D_mm  > 0.0 msg "diameter must be positive";
+>     output V label "Flow velocity" unit "m/s";        // 10. Declare what to return
+> }
+> ```
+>
+> That is a complete, runnable CRYS-L plan. Send it to the API and receive an exact answer
+> with the standard cited — no spreadsheet errors, no approximations.
+
+---
+
+---
+
 ## 2. Lexical Structure
 
 ### 2.1 Comments

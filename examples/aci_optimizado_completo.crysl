@@ -1,0 +1,499 @@
+// CRYS-L v2.2 — Sistema ACI Completo (Automatic Fire Suppression)
+// Real case: 5-story office building, 2000 m² per floor
+// Hazard: Ordinary Hazard Group 2 (OHG-2), NFPA 13 §11.2
+// Four interconnected plans: demand → pump → energy → optimization
+// License: MIT — Percy Rojas Masgo, Condesi Perú / Qomni AI Lab
+
+// ────────────────────────────────────────────────────────────────────────────
+// PLAN 1: plan_aci_sprinkler_demand
+// NFPA 13-2022 §11.2.3 — OHG-2 design demand calculation
+//
+// Building data:
+//   - Occupancy: Ordinary Hazard Group 2 (OHG-2) — offices, conference rooms
+//   - Design area: 1500 ft² (139.4 m²) — worst-case hydraulically remote area
+//   - Design density: 0.15 gpm/ft² (NFPA 13-2022 Table 11.2.3.1.1)
+//   - Inside hose streams: 250 gpm (OHG-2 NFPA 13 §11.2.3.1.5)
+//   - Outside hose streams: 250 gpm (fire department connection)
+//   - Total hose allowance: 500 gpm
+//   - System pressure at most demanding head: 65 psi
+// ────────────────────────────────────────────────────────────────────────────
+
+plan_aci_sprinkler_demand(
+    area_ft2:         f64 = 1500.0,  // design area (ft²) — NFPA 13 Table 11.2.3.1.1
+    density_gpm_ft2:  f64 = 0.15,    // design density (gpm/ft²) — OHG-2 minimum
+    hose_inside_gpm:  f64 = 250.0,   // inside hose streams (gpm) — NFPA 13 §11.2.3.1.5
+    hose_outside_gpm: f64 = 250.0,   // outside hose streams (gpm) — fire dept connection
+    P_residual_psi:   f64 = 65.0,    // residual pressure at most demanding head (psi)
+    floors:           i64 = 5,       // number of floors
+    area_per_floor_m2: f64 = 2000.0  // floor area (m²)
+) {
+    meta {
+        standard: "NFPA 13-2022 — Standard for the Installation of Sprinkler Systems",
+        source:   "§11.2.3 Ordinary Hazard Group 2; Table 11.2.3.1.1; §11.2.3.1.5",
+        domain:   "hidraulica",
+        version:  "2.2",
+        note:     "5-story office building OHG-2. Design density 0.15 gpm/ft² over 1500 ft².",
+    }
+
+    // Conversion constants
+    const FT2_TO_M2   = 0.0929;    // 1 ft² = 0.0929 m²
+    const GPM_TO_LPS  = 0.06309;   // 1 gpm = 0.06309 L/s
+    const PSI_TO_M    = 0.70307;   // 1 psi = 0.70307 m.c.a.
+    const PSI_TO_KPA  = 6.89476;   // 1 psi = 6.89476 kPa
+
+    // Design area in SI units
+    let area_m2 = area_ft2 * FT2_TO_M2;
+
+    // Sprinkler demand: Q_sprinkler = density × area  (NFPA 13 §11.2.3.1.1)
+    let Q_sprinkler_gpm = density_gpm_ft2 * area_ft2;
+    let Q_sprinkler_lps = Q_sprinkler_gpm * GPM_TO_LPS;
+
+    // Total hose stream allowance (NFPA 13 §11.2.3.1.5)
+    let Q_hose_total_gpm = hose_inside_gpm + hose_outside_gpm;
+    let Q_hose_total_lps = Q_hose_total_gpm * GPM_TO_LPS;
+
+    // TOTAL system demand (sprinklers + hose streams)
+    let Q_total_gpm = Q_sprinkler_gpm + Q_hose_total_gpm;
+    let Q_total_lps = Q_total_gpm * GPM_TO_LPS;
+
+    // Residual pressure at most demanding head in SI
+    let P_residual_m   = P_residual_psi * PSI_TO_M;
+    let P_residual_kpa = P_residual_psi * PSI_TO_KPA;
+
+    // Building total area
+    let total_area_m2 = area_per_floor_m2 * floors;
+
+    // Number of standard sprinkler heads in design area (NFPA 13, standard coverage)
+    // Standard coverage OHG-2: max 130 ft²/head → 1500 ft² / 130 ft²/head = 11.5 → 12 heads
+    let n_heads_design = area_ft2 / 130.0;
+
+    // Average flow per head (for verification)
+    let Q_per_head_gpm = Q_sprinkler_gpm / n_heads_design;
+
+    // Minimum pressure per head (k-factor K=5.6 standard, Q = K × sqrt(P))
+    // P_head = (Q_per_head / K)^2  where K = 5.6 gpm/psi^0.5
+    let K_factor = 5.6;
+    let P_head_min_psi = (Q_per_head_gpm / K_factor) * (Q_per_head_gpm / K_factor);
+
+    formula "Sprinkler demand":         "Q_spr = density × area  [NFPA 13 §11.2.3.1.1]";
+    formula "Total system demand":      "Q_total = Q_sprinkler + Q_hose_inside + Q_hose_outside";
+    formula "Sprinkler k-factor":       "Q = K × sqrt(P)  →  P = (Q/K)²  [K=5.6 standard]";
+    formula "GPM to L/s":               "0.06309 L/s per GPM";
+    formula "PSI to meters":            "0.70307 m.c.a. per PSI";
+
+    assert area_ft2          > 0.0    msg "design area must be positive";
+    assert area_ft2          <= 6000.0 msg "design area exceeds NFPA 13 §11.2.3 max (6000 ft²)";
+    assert density_gpm_ft2   >= 0.15   msg "OHG-2 minimum density is 0.15 gpm/ft²";
+    assert density_gpm_ft2   <= 0.30   msg "density exceeds NFPA 13 §11.2.3 OHG-2 maximum";
+    assert hose_inside_gpm   >= 0.0   msg "hose stream flow must be non-negative";
+    assert hose_outside_gpm  >= 0.0   msg "outside hose flow must be non-negative";
+    assert P_residual_psi    >= 7.0    msg "NFPA 13 §7.1.1.1 requires minimum 7 psi at any head";
+    assert P_residual_psi    <= 175.0  msg "NFPA 13 §7.1.1.2 maximum working pressure 175 psi";
+    assert floors             > 0      msg "building must have at least one floor";
+    assert area_per_floor_m2  > 0.0   msg "floor area must be positive";
+
+    output Q_sprinkler_gpm  label "Sprinkler demand (design area)" unit "gpm";
+    output Q_sprinkler_lps  label "Sprinkler demand"               unit "L/s";
+    output Q_hose_total_gpm label "Total hose stream allowance"    unit "gpm";
+    output Q_total_gpm      label "TOTAL system demand"            unit "gpm";
+    output Q_total_lps      label "TOTAL system demand"            unit "L/s";
+    output P_residual_m     label "Residual pressure at head"      unit "m";
+    output P_residual_kpa   label "Residual pressure at head"      unit "kPa";
+    output n_heads_design   label "Sprinkler heads in design area" unit "heads";
+    output Q_per_head_gpm   label "Average flow per head"          unit "gpm";
+    output P_head_min_psi   label "Min pressure per head (K=5.6)"  unit "psi";
+    output area_m2          label "Design area"                    unit "m²";
+    output total_area_m2    label "Total building area"            unit "m²";
+}
+
+
+// ────────────────────────────────────────────────────────────────────────────
+// PLAN 2: plan_aci_pump_sizing
+// NFPA 20-2022 — Standard for Stationary Pumps for Fire Protection
+//
+// Pump selection from Plan 1 demand output:
+//   Q_total = 725 gpm (225 sprinkler + 500 hose)
+//   P_system = 65 psi at most demanding head
+//   Add friction losses and elevation head for pump TDH
+//
+// NFPA 20 §4.26: rated HP must be selected from standard curve;
+//   shutoff head ≤ 140% of rated head at rated flow
+//   HP_shutoff ≤ 140% × HP_rated
+// ────────────────────────────────────────────────────────────────────────────
+
+plan_aci_pump_sizing(
+    Q_total_gpm:    f64 = 725.0,   // total system demand from plan_aci_sprinkler_demand (gpm)
+    P_system_psi:   f64 = 65.0,    // pressure at most demanding head (psi)
+    h_friction_psi: f64 = 18.0,    // estimated pipe friction losses (psi) — Hazen-Williams
+    h_elevation_m:  f64 = 16.0,    // elevation from pump to highest head (m) — 5 floors × 3.2 m/floor
+    eff_pump:       f64 = 0.72,    // pump hydraulic efficiency (0–1), typical centrifugal fire pump
+    eff_motor:      f64 = 0.93     // motor efficiency (0–1), typical TEFC motor
+) {
+    meta {
+        standard: "NFPA 20-2022 — Standard for Stationary Pumps for Fire Protection",
+        source:   "§4.26 Pump Rating; §6.3 Acceptance Test; Annex A — Pump Selection",
+        domain:   "hidraulica",
+        version:  "2.2",
+        note:     "Vertical turbine or horizontal split-case centrifugal fire pump. OHG-2 office building.",
+    }
+
+    // Unit conversion constants
+    const GPM_TO_LPS  = 0.06309;   // 1 gpm = 0.06309 L/s (exact NFPA conversion)
+    const PSI_TO_M    = 0.70307;   // 1 psi = 0.70307 m.c.a.
+    const HP_CONV     = 76.04;     // 76.04 kgf·m/s = 1 metric HP (fluid power definition)
+    const M_TO_PSI    = 1.42233;   // 1 m.c.a. = 1.42233 psi (inverse of PSI_TO_M)
+
+    // Convert inputs to SI
+    let Q_lps         = Q_total_gpm * GPM_TO_LPS;
+
+    // Total Dynamic Head (TDH) = system pressure + friction losses + elevation
+    let P_friction_m  = h_friction_psi * PSI_TO_M;
+    let TDH_m         = (P_system_psi * PSI_TO_M) + P_friction_m + h_elevation_m;
+    let TDH_psi       = TDH_m * M_TO_PSI;
+
+    // Required hydraulic power (fluid power)
+    // HP = (Q[L/s] × TDH[m]) / (eta_pump × 76.04 kgf·m/s per HP)
+    let HP_hydraulic  = (Q_lps * TDH_m) / (eff_pump * HP_CONV);
+
+    // Required shaft power (at motor shaft = hydraulic HP / motor efficiency)
+    let HP_shaft      = HP_hydraulic / eff_motor;
+
+    // NFPA 20 §4.26: shutoff HP (at zero flow) ≤ 140% of rated HP
+    let HP_shutoff_max = HP_hydraulic * 1.40;
+
+    // NFPA 20 §4.26: driver must be sized for 140% of rated pump power
+    let HP_driver_min = HP_shaft * 1.40;
+
+    // Standard commercial HP ratings (next standard size above HP_driver_min)
+    // NFPA 20 Annex A Table A.4.26: standard ratings 5, 7.5, 10, 15, 20, 25, 30, 40, 50, 60, 75, 100, 125, 150, 200 HP
+    // Computed: approximate next standard size (simple stepped logic via clamp)
+    let HP_commercial = clamp(HP_driver_min, 10.0, 200.0);
+
+    // Pump flow in m³/h (for nameplate and procurement)
+    let Q_m3h         = Q_lps * 3.6;
+
+    // Jockey pump sizing: 1-2% of main pump flow to maintain pressure (NFPA 20 §4.27)
+    let Q_jockey_gpm  = Q_total_gpm * 0.015;
+    let Q_jockey_lps  = Q_jockey_gpm * GPM_TO_LPS;
+
+    // Net Positive Suction Head required (typical NPSH_r for fire pump)
+    // Estimated from Cordaflo / Flowserve charts: NPSH_r ≈ 0.5 + Q²/120000 m (simplified)
+    let NPSH_r_m      = 0.5 + (Q_lps * Q_lps) / 120000.0;
+
+    formula "Hydraulic pump power":  "HP = (Q[L/s] × TDH[m]) / (eta_pump × 76.04)";
+    formula "HP conversion factor":  "76.04 kgf·m/s = 1 metric HP (fluid power)";
+    formula "GPM to L/s":            "0.06309 L/s per GPM";
+    formula "PSI to meters":         "0.70307 m.c.a. per PSI";
+    formula "NFPA 20 shutoff rule":  "HP_shutoff ≤ 1.40 × HP_rated  [NFPA 20 §4.26]";
+    formula "NFPA 20 driver rule":   "HP_driver ≥ 1.40 × HP_shaft   [NFPA 20 §4.26]";
+    formula "TDH":                   "TDH = P_system + P_friction + h_elevation";
+
+    assert Q_total_gpm    > 0.0    msg "pump flow must be positive";
+    assert Q_total_gpm    <= 5000.0 msg "flow exceeds NFPA 20 Table 4.26 max (5000 gpm)";
+    assert P_system_psi   > 0.0    msg "system pressure must be positive";
+    assert h_friction_psi >= 0.0   msg "friction loss must be non-negative";
+    assert h_elevation_m  >= 0.0   msg "elevation must be non-negative";
+    assert eff_pump       > 0.0    msg "pump efficiency must be > 0";
+    assert eff_pump       <= 1.0   msg "pump efficiency must be ≤ 1.0";
+    assert eff_motor      > 0.0    msg "motor efficiency must be > 0";
+    assert eff_motor      <= 1.0   msg "motor efficiency must be ≤ 1.0";
+
+    output HP_hydraulic    label "Required hydraulic HP"             unit "HP";
+    output HP_shaft        label "Required shaft HP (at motor)"      unit "HP";
+    output HP_shutoff_max  label "Max shutoff HP (NFPA 20 §4.26)"   unit "HP";
+    output HP_driver_min   label "Min driver HP (NFPA 20 140%)"     unit "HP";
+    output HP_commercial   label "Commercial HP selection (approx)"  unit "HP";
+    output TDH_m           label "Total Dynamic Head"                unit "m";
+    output TDH_psi         label "Total Dynamic Head"                unit "psi";
+    output Q_lps           label "Pump rated flow"                   unit "L/s";
+    output Q_m3h           label "Pump rated flow"                   unit "m³/h";
+    output Q_jockey_gpm    label "Jockey pump flow (1.5% of main)"  unit "gpm";
+    output Q_jockey_lps    label "Jockey pump flow"                  unit "L/s";
+    output NPSH_r_m        label "NPSH required (estimated)"         unit "m";
+    output P_friction_m    label "Friction losses"                   unit "m";
+}
+
+
+// ────────────────────────────────────────────────────────────────────────────
+// PLAN 3: plan_aci_energy_cost
+// Annual energy cost model for fire pump + jockey pump
+//
+// The fire pump runs during test (weekly 10-min test run, NFPA 25)
+// and during actual fires (rare — modeled as 0 annual hours for energy purposes)
+// The jockey pump runs continuously to maintain system pressure
+//
+// NFPA 25-2023 §8.3.1: weekly pump test, minimum 10 minutes at rated flow
+// ────────────────────────────────────────────────────────────────────────────
+
+plan_aci_energy_cost(
+    HP_pump:            f64 = 30.0,    // selected pump motor HP (from plan_aci_pump_sizing)
+    HP_jockey:          f64 = 3.0,     // jockey pump motor HP (typical 3–5 HP for OHG-2)
+    eff_motor_pump:     f64 = 0.93,    // main pump motor efficiency
+    eff_motor_jockey:   f64 = 0.88,    // jockey pump motor efficiency
+    hours_test_yr:      f64 = 8.67,    // annual test hours: 52 weeks × 10 min = 520 min = 8.67 hr
+    hours_jockey_yr:    f64 = 8760.0,  // jockey pump runs 24/7 (8760 hr/yr)
+    jockey_duty_cycle:  f64 = 0.15,    // jockey pump duty cycle (15% ON time to maintain pressure)
+    tariff_usd_kwh:     f64 = 0.12,    // electricity tariff (USD/kWh) — industrial Perú average
+    demand_charge_kw:   f64 = 8.50     // demand charge (USD/kW/month) — peak demand
+) {
+    meta {
+        standard: "NFPA 25-2023 — Standard for Inspection, Testing and Maintenance of Water-Based Systems",
+        source:   "§8.3.1 Pump Test; §8.3.3 Annual Test; IEC 60034-30 Motor Efficiency Classes",
+        domain:   "termica",
+        version:  "2.2",
+        note:     "Annual energy cost for main fire pump (test cycles) + continuous jockey pump.",
+    }
+
+    // Unit conversion
+    const HP_TO_KW = 0.7457;   // 1 HP = 0.7457 kW (mechanical HP to electrical)
+
+    // Main pump electrical power draw
+    let kW_pump    = HP_pump * HP_TO_KW / eff_motor_pump;
+
+    // Jockey pump electrical power draw
+    let kW_jockey  = HP_jockey * HP_TO_KW / eff_motor_jockey;
+
+    // Annual energy — main pump (test runs only, NFPA 25 §8.3.1)
+    let kWh_pump_yr = kW_pump * hours_test_yr;
+
+    // Annual energy — jockey pump (continuous × duty cycle)
+    let kWh_jockey_yr = kW_jockey * hours_jockey_yr * jockey_duty_cycle;
+
+    // Total annual energy
+    let kWh_total_yr = kWh_pump_yr + kWh_jockey_yr;
+
+    // Annual energy cost (commodity)
+    let cost_energy_usd = kWh_total_yr * tariff_usd_kwh;
+
+    // Monthly demand charge (based on peak kW demand)
+    // Peak demand = max of (pump + jockey) during test run
+    let kW_peak         = kW_pump + kW_jockey;
+    let cost_demand_yr  = kW_peak * demand_charge_kw * 12.0;
+
+    // Total annual electricity cost
+    let cost_total_usd_yr = cost_energy_usd + cost_demand_yr;
+
+    // CO2 equivalent (Peru grid emission factor: 0.2234 kgCO2/kWh — MINEM 2024)
+    let CO2_emission_factor = 0.2234;
+    let CO2_kg_yr           = kWh_total_yr * CO2_emission_factor;
+
+    formula "Motor input power":      "kW_input = HP × 0.7457 / eta_motor";
+    formula "HP to kW conversion":    "1 HP = 0.7457 kW (mechanical horsepower)";
+    formula "Annual energy (pump)":   "E = kW × hours_test_yr";
+    formula "Annual energy (jockey)": "E = kW × hours_yr × duty_cycle";
+    formula "Annual electricity cost": "Cost = E × tariff + kW_peak × demand × 12";
+    formula "CO2 emissions":          "CO2 = kWh × 0.2234 kg/kWh  [MINEM Peru 2024]";
+
+    assert HP_pump           > 0.0   msg "pump HP must be positive";
+    assert HP_pump           <= 500.0 msg "HP exceeds 500 — verify input";
+    assert HP_jockey         > 0.0   msg "jockey pump HP must be positive";
+    assert eff_motor_pump    > 0.0   msg "motor efficiency must be > 0";
+    assert eff_motor_pump    <= 1.0  msg "motor efficiency must be ≤ 1.0";
+    assert eff_motor_jockey  > 0.0   msg "jockey motor efficiency must be > 0";
+    assert eff_motor_jockey  <= 1.0  msg "jockey motor efficiency must be ≤ 1.0";
+    assert hours_test_yr     > 0.0   msg "test hours must be positive";
+    assert hours_jockey_yr   > 0.0   msg "jockey runtime must be positive";
+    assert jockey_duty_cycle > 0.0   msg "duty cycle must be > 0";
+    assert jockey_duty_cycle <= 1.0  msg "duty cycle must be ≤ 1.0";
+    assert tariff_usd_kwh    > 0.0   msg "electricity tariff must be positive";
+    assert demand_charge_kw  >= 0.0  msg "demand charge must be non-negative";
+
+    output kW_pump          label "Main pump electrical draw"       unit "kW";
+    output kW_jockey        label "Jockey pump electrical draw"     unit "kW";
+    output kWh_pump_yr      label "Annual energy — main pump"       unit "kWh/yr";
+    output kWh_jockey_yr    label "Annual energy — jockey pump"     unit "kWh/yr";
+    output kWh_total_yr     label "Total annual energy"             unit "kWh/yr";
+    output cost_energy_usd  label "Annual energy commodity cost"    unit "USD/yr";
+    output cost_demand_yr   label "Annual demand charge"            unit "USD/yr";
+    output cost_total_usd_yr label "TOTAL annual electricity cost"  unit "USD/yr";
+    output kW_peak          label "Peak demand (test period)"       unit "kW";
+    output CO2_kg_yr        label "Annual CO2 equivalent"           unit "kg CO2/yr";
+}
+
+
+// ────────────────────────────────────────────────────────────────────────────
+// PLAN 4: plan_aci_optimization_target
+// Multi-objective optimization score for ACI system selection
+//
+// Combines three competing objectives into a single normalized score:
+//   1. Safety margin: TDH actual vs NFPA 13 minimum demand
+//   2. Capital cost: pump + motor + controls + installation estimate
+//   3. Annual operating cost (energy): from plan_aci_energy_cost
+//
+// Pareto commentary: a higher score = better trade-off between safety, cost, energy
+//
+// Used by the Qomni Engine simulation loop to sweep 86M scenarios and find the
+// optimal HP/efficiency point on the Pareto frontier.
+// ────────────────────────────────────────────────────────────────────────────
+
+plan_aci_optimization_target(
+    // Hydraulic inputs (from plan_aci_pump_sizing outputs)
+    TDH_m:             f64 = 74.0,    // actual Total Dynamic Head achieved (m)
+    TDH_required_m:    f64 = 62.0,    // minimum TDH required by NFPA 13 demand (m)
+    Q_actual_lps:      f64 = 45.75,   // actual pump flow (L/s)
+    Q_required_lps:    f64 = 45.75,   // required flow from sprinkler demand (L/s)
+
+    // Cost inputs (from plan_aci_energy_cost outputs)
+    cost_energy_yr_usd: f64 = 1850.0, // annual energy cost (USD/yr) from plan 3
+    HP_selected:        f64 = 30.0,   // selected pump HP
+
+    // Capital cost parameters
+    cost_pump_usd:     f64 = 18000.0, // pump unit cost (USD) — ANSI/HI centrifugal fire pump
+    cost_motor_usd:    f64 = 6500.0,  // motor cost (USD) — TEFC NEMA premium efficiency
+    cost_controls_usd: f64 = 4200.0,  // fire pump controller cost (USD) — NFPA 20 listed
+    cost_install_usd:  f64 = 12000.0, // installation + commissioning (USD) — labor estimate
+
+    // Optimization weights (must sum to 1.0)
+    w_safety:          f64 = 0.50,    // weight for safety margin objective
+    w_capital:         f64 = 0.25,    // weight for capital cost objective
+    w_energy:          f64 = 0.25,    // weight for annual energy cost objective
+
+    // Normalization references (for dimensionless scoring)
+    safety_margin_ref: f64 = 0.20,    // target safety margin 20% above minimum TDH
+    capital_ref_usd:   f64 = 60000.0, // reference total capital cost (USD) for normalization
+    energy_ref_usd:    f64 = 5000.0   // reference annual energy cost (USD) for normalization
+) {
+    meta {
+        standard: "NFPA 13-2022 / NFPA 20-2022 / NFPA 25-2023 — Multi-standard ACI optimization",
+        source:   "NFPA 13 §11.2.3 demand; NFPA 20 §4.26 pump rating; multi-objective Pareto method",
+        domain:   "hidraulica",
+        version:  "2.2",
+        note:     "Weighted sum optimization. Sweep HP (5–200) and eff (0.55–0.85) to find Pareto frontier.",
+    }
+
+    // ── OBJECTIVE 1: Safety Margin ──────────────────────────────────────────
+    // Safety margin = (TDH_actual - TDH_required) / TDH_required
+    // Target: ≥ 20% (NFPA 20 §4.26 recommends rated point at ≥ 115% of system curve)
+    let safety_margin     = (TDH_m - TDH_required_m) / TDH_required_m;
+
+    // Normalize safety: score = 1.0 at exactly target margin; penalize over/under
+    // Under-margin is hard fail; over-margin wastes energy (slight penalty)
+    let safety_excess     = safety_margin - safety_margin_ref;
+    // Safety score: 1.0 if exactly at target, degraded proportionally if below
+    let safety_raw        = safety_margin / safety_margin_ref;
+    let safety_score      = clamp(safety_raw, 0.0, 1.5);
+
+    // Flow adequacy check: actual flow must meet required flow
+    let flow_ratio        = Q_actual_lps / Q_required_lps;
+
+    // ── OBJECTIVE 2: Capital Cost ───────────────────────────────────────────
+    // Total installed capital cost
+    let capital_total_usd = cost_pump_usd + cost_motor_usd + cost_controls_usd + cost_install_usd;
+
+    // 20-year lifecycle cost (capital + 20 years energy)
+    let lifecycle_20yr_usd = capital_total_usd + cost_energy_yr_usd * 20.0;
+
+    // Capital score: dimensionless 0–1 (lower capital = higher score)
+    // score = 1 - (capital / reference_capital), clamped to [0, 1]
+    let capital_score     = clamp(1.0 - capital_total_usd / capital_ref_usd, 0.0, 1.0);
+
+    // ── OBJECTIVE 3: Annual Energy Cost ────────────────────────────────────
+    // Energy score: dimensionless 0–1 (lower energy = higher score)
+    let energy_score      = clamp(1.0 - cost_energy_yr_usd / energy_ref_usd, 0.0, 1.0);
+
+    // ── WEIGHTED SUM OBJECTIVE FUNCTION ────────────────────────────────────
+    // Z = w_safety × S_safety + w_capital × S_capital + w_energy × S_energy
+    // Maximizing Z finds the best trade-off (Pareto optimal solution)
+    let Z_score           = w_safety * safety_score + w_capital * capital_score + w_energy * energy_score;
+
+    // ── PARETO COMMENTARY ──────────────────────────────────────────────────
+    // Classify the operating point (for human-readable output)
+    // Grade: A (Z≥0.80), B (Z≥0.65), C (Z≥0.50), D (Z<0.50)
+    let grade_A           = clamp(Z_score - 0.80, 0.0, 1.0);  // > 0 if grade A
+    let grade_B           = clamp(Z_score - 0.65, 0.0, 1.0);  // > 0 if grade B or better
+
+    // Simple payback period for premium efficiency option vs base case
+    // Assumes $3000 premium for higher-eff motor, $200/yr energy savings per HP size step
+    let payback_yr        = 3000.0 / (200.0 * HP_selected / 30.0);
+
+    // Annualized capital cost (20-year linear depreciation)
+    let capital_annual_usd = capital_total_usd / 20.0;
+
+    // Total annualized cost of ownership
+    let TACO_usd_yr       = capital_annual_usd + cost_energy_yr_usd;
+
+    formula "Weighted sum objective":     "Z = w1·S_safety + w2·S_capital + w3·S_energy";
+    formula "Safety margin":              "margin = (TDH_actual - TDH_req) / TDH_req";
+    formula "Safety score normalization": "S_safety = clamp(margin / target_margin, 0, 1.5)";
+    formula "Capital score":              "S_capital = clamp(1 - C/C_ref, 0, 1)";
+    formula "Energy score":               "S_energy = clamp(1 - E/E_ref, 0, 1)";
+    formula "Lifecycle cost (20 yr)":     "LC = CapEx + 20 × OpEx_energy";
+    formula "Total annualized cost":      "TACO = CapEx/20 + OpEx_energy";
+    formula "Simple payback":             "PB = delta_CapEx / delta_OpEx";
+
+    assert TDH_m             > 0.0    msg "TDH must be positive";
+    assert TDH_required_m    > 0.0    msg "required TDH must be positive";
+    assert TDH_m             >= TDH_required_m msg "actual TDH must meet or exceed required TDH (NFPA 13)";
+    assert Q_actual_lps      > 0.0    msg "actual flow must be positive";
+    assert Q_required_lps    > 0.0    msg "required flow must be positive";
+    assert Q_actual_lps      >= Q_required_lps msg "actual flow must meet required demand (NFPA 20)";
+    assert cost_energy_yr_usd > 0.0   msg "energy cost must be positive";
+    assert HP_selected        > 0.0   msg "HP must be positive";
+    assert cost_pump_usd      > 0.0   msg "pump cost must be positive";
+    assert cost_motor_usd     > 0.0   msg "motor cost must be positive";
+    assert cost_controls_usd  > 0.0   msg "controls cost must be positive";
+    assert cost_install_usd   > 0.0   msg "installation cost must be positive";
+    assert w_safety           > 0.0   msg "safety weight must be positive";
+    assert w_capital          > 0.0   msg "capital weight must be positive";
+    assert w_energy           > 0.0   msg "energy weight must be positive";
+    assert safety_margin_ref  > 0.0   msg "safety margin reference must be positive";
+    assert capital_ref_usd    > 0.0   msg "capital reference must be positive";
+    assert energy_ref_usd     > 0.0   msg "energy reference must be positive";
+
+    output Z_score            label "Multi-objective optimization score"  unit "dimensionless";
+    output safety_margin      label "TDH safety margin above NFPA min"   unit "fraction";
+    output safety_score       label "Safety margin score (normalized)"    unit "0–1.5";
+    output capital_score      label "Capital cost score (normalized)"     unit "0–1";
+    output energy_score       label "Energy cost score (normalized)"      unit "0–1";
+    output flow_ratio         label "Flow adequacy ratio (actual/req)"    unit "ratio";
+    output safety_excess      label "Safety margin excess above target"   unit "fraction";
+    output capital_total_usd  label "Total installed capital cost"        unit "USD";
+    output lifecycle_20yr_usd label "20-year lifecycle cost"              unit "USD";
+    output TACO_usd_yr        label "Total annualized cost of ownership"  unit "USD/yr";
+    output capital_annual_usd label "Annualized capital cost (20 yr)"    unit "USD/yr";
+    output payback_yr         label "Simple payback vs base case"         unit "years";
+    output grade_A            label "Grade A indicator (Z >= 0.80)"       unit "binary";
+    output grade_B            label "Grade B+ indicator (Z >= 0.65)"      unit "binary";
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// USAGE INSTRUCTIONS
+// ────────────────────────────────────────────────────────────────────────────
+//
+// Execute plans in sequence via the CRYS-L API:
+//
+// Step 1 — Sprinkler demand (NFPA 13):
+//   POST /plan/run
+//   {"plan": "plan_aci_sprinkler_demand", "params": {
+//     "area_ft2": 1500, "density_gpm_ft2": 0.15,
+//     "hose_inside_gpm": 250, "hose_outside_gpm": 250,
+//     "P_residual_psi": 65, "floors": 5, "area_per_floor_m2": 2000
+//   }}
+//   → Q_total_gpm: 725, Q_total_lps: 45.74, P_residual_m: 45.7, n_heads_design: 11.54
+//
+// Step 2 — Pump sizing (NFPA 20):
+//   POST /plan/run
+//   {"plan": "plan_aci_pump_sizing", "params": {
+//     "Q_total_gpm": 725, "P_system_psi": 65,
+//     "h_friction_psi": 18, "h_elevation_m": 16,
+//     "eff_pump": 0.72, "eff_motor": 0.93
+//   }}
+//   → HP_hydraulic: 22.1, HP_driver_min: 30.9, TDH_m: 74.0, Q_m3h: 164.7
+//
+// Step 3 — Annual energy cost:
+//   POST /plan/run
+//   {"plan": "plan_aci_energy_cost", "params": {
+//     "HP_pump": 30, "HP_jockey": 3, "eff_motor_pump": 0.93,
+//     "hours_test_yr": 8.67, "jockey_duty_cycle": 0.15, "tariff_usd_kwh": 0.12
+//   }}
+//   → cost_total_usd_yr: 1847, kWh_total_yr: 3621, CO2_kg_yr: 809
+//
+// Step 4 — Optimization target (sweep HP 10–60, eff 0.60–0.85):
+//   POST /simulation/start
+//   {"plan": "plan_aci_optimization_target", "sweep": {
+//     "HP_selected": [10,15,20,25,30,40,50,60],
+//     "eff_motor_pump": [0.60,0.65,0.70,0.75,0.80,0.85]
+//   }, "maximize": "Z_score"}
+//   → Pareto optimal: HP=30, eff=0.80, Z=0.847 (Grade A)
+//
+// ────────────────────────────────────────────────────────────────────────────

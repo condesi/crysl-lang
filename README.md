@@ -2,7 +2,7 @@
 
 **Created by Percy Rojas Masgo — Condesi Perú / Qomni AI Lab**
 **Open standard for deterministic engineering calculations.**
-MIT License · [Live Demo](https://qomni.clanmarketer.com/qomn/) · [Paper](paper/CRYSL_JIT_Paper_2026.md)
+MIT License · [Live Demo](https://qomni.clanmarketer.com/qomn/) · [Paper](paper/QOMN_JIT_Paper_2026.md)
 **Spec v2.3 RC** — Cranelift native JIT, L4 Register ABI, OracleCache, simulation engine, 13 stdlib domains.
 
 > Write an engineering calculation once. Get **exact answers** in **nanoseconds on the JIT hot path**,

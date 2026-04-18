@@ -1,4 +1,4 @@
-# CRYS-L: A Domain-Specific Language with JIT Compilation for Deterministic Engineering Computation
+# QOMN: A Domain-Specific Language with JIT Compilation for Deterministic Engineering Computation
 
 **Percy Rojas Masgo**
 Qomni AI Lab, Lima, Peru
@@ -12,7 +12,7 @@ contact@qomniailab.com
 
 ## Abstract
 
-Engineering computation in domains such as fire protection, electrical design, civil structures, and financial compliance demands both numerical precision and extremely low execution latency. This paper presents CRYS-L (Crystal Language), a domain-specific language and runtime system designed for deterministic engineering execution rather than probabilistic inference. CRYS-L plans compile to native x86-64 machine code and execute through two measured fast paths on Server5 (KVM AMD EPYC, Ubuntu 24.04 LTS, 2026-04-16): a standard AOT path at **7.83 ns** for `plan_pump_sizing`, and an optimized L4 Register ABI hot path at **5.37 ns** for the same plan. The CRYS-L simulation engine sustains **13.0 million scenarios per second** on the same KVM host with physics validation and Pareto ranking enabled. This corresponds to an approximately **1.53 billion×** speedup over a 12,000 ms GPT-4-class API response for the same deterministic engineering result. Bare-metal projection for the simulation engine is approximately **25–35 million scenarios per second** on AVX-512 capable hardware. An integrated Qomni Orchestrator combines deterministic CRYS-L execution with LLM interpretation for ambiguous or policy-sensitive queries. The complete system is deployed as a production service and exposed through an HTTP API.
+Engineering computation in domains such as fire protection, electrical design, civil structures, and financial compliance demands both numerical precision and extremely low execution latency. This paper presents QOMN (QOMN Language), a domain-specific language and runtime system designed for deterministic engineering execution rather than probabilistic inference. QOMN plans compile to native x86-64 machine code and execute through two measured fast paths on Server5 (KVM AMD EPYC, Ubuntu 24.04 LTS, 2026-04-16): a standard AOT path at **7.83 ns** for `plan_pump_sizing`, and an optimized L4 Register ABI hot path at **5.37 ns** for the same plan. The QOMN simulation engine sustains **13.0 million scenarios per second** on the same KVM host with physics validation and Pareto ranking enabled. This corresponds to an approximately **1.53 billion×** speedup over a 12,000 ms GPT-4-class API response for the same deterministic engineering result. Bare-metal projection for the simulation engine is approximately **25–35 million scenarios per second** on AVX-512 capable hardware. An integrated Qomni Orchestrator combines deterministic QOMN execution with LLM interpretation for ambiguous or policy-sensitive queries. The complete system is deployed as a production service and exposed through an HTTP API.
 
 ---
 
@@ -28,34 +28,34 @@ The dominant toolchains available to practicing engineers fall into three catego
 
 **Large Language Models (LLMs).** LLM-based engineering assistants can interpret natural-language queries and return numerical answers, but commonly operate at seconds-scale latency and provide no formal guarantee of determinism, auditability, or standards compliance.
 
-CRYS-L addresses all three limitations simultaneously. By adopting a minimal deterministic language model — where every computation is a traceable plan over explicit formulas — CRYS-L enables:
+QOMN addresses all three limitations simultaneously. By adopting a minimal deterministic language model — where every computation is a traceable plan over explicit formulas — QOMN enables:
 
 1. **Native execution at nanosecond scale** on the hot path via compiled x86-64 machine code.
 2. **Low-overhead caching** through FNV-1a parameter hashing with measured probe cost around **12 ns**.
 3. **Continuous simulation** at **13.0M scenarios/sec** on KVM with validation and Pareto ranking enabled.
 4. **Standards traceability**: every plan can encode a specific clause of a published engineering standard.
-5. **Hybrid orchestration**: the Qomni layer adds natural-language handling and explanation while CRYS-L executes exact calculations.
+5. **Hybrid orchestration**: the Qomni layer adds natural-language handling and explanation while QOMN executes exact calculations.
 
-The remainder of this paper is organized as follows. Section 2 describes the CRYS-L language design. Section 3 details the compilation and execution pipeline. Section 4 explains the cache architecture. Section 5 enumerates the engineering domains covered. Section 6 describes the Qomni Orchestrator. Section 7 presents the benchmark evaluation. Section 8 discusses deployment and future work.
+The remainder of this paper is organized as follows. Section 2 describes the QOMN language design. Section 3 details the compilation and execution pipeline. Section 4 explains the cache architecture. Section 5 enumerates the engineering domains covered. Section 6 describes the Qomni Orchestrator. Section 7 presents the benchmark evaluation. Section 8 discusses deployment and future work.
 
 ---
 
-## 2. CRYS-L Language Design
+## 2. QOMN Language Design
 
 ### 2.1 Design Philosophy
 
-CRYS-L is deliberately minimal. Its core value type is floating-point numeric data, reflecting the reality that engineering formula evaluation is dominated by deterministic arithmetic. The language enforces purity: no side effects, no mutable external state, no I/O, and no recursion in the core plan model. This purity makes plans safe to compile, cache, benchmark, and reproduce.
+QOMN is deliberately minimal. Its core value type is floating-point numeric data, reflecting the reality that engineering formula evaluation is dominated by deterministic arithmetic. The language enforces purity: no side effects, no mutable external state, no I/O, and no recursion in the core plan model. This purity makes plans safe to compile, cache, benchmark, and reproduce.
 
 Two conceptual layers exist:
 
 - **Plan language** — the open user-facing DSL used to define engineering calculations.
-- **Execution runtime** — the native compilation and dispatch engine used by CRYS-L and Qomni.
+- **Execution runtime** — the native compilation and dispatch engine used by QOMN and Qomni.
 
 ### 2.2 Plan Syntax
 
 A plan declaration specifies a name, typed parameters, metadata, intermediate expressions, formulas, assertions, and outputs.
 
-```crysl
+```qomn
 plan_pump_sizing(
     Q_gpm: f64,
     P_psi: f64,
@@ -87,7 +87,7 @@ The language is designed to be readable by engineers while remaining easy to par
 
 ### 3.1 Pipeline Overview
 
-The CRYS-L execution path consists of:
+The QOMN execution path consists of:
 
 ```
 Source Text
@@ -134,13 +134,13 @@ When invoked through the public API, loopback latency is dominated by transport 
 
 ### 3.4 OracleCache
 
-CRYS-L uses FNV-1a hashing over input parameters to detect repeated calls. The measured cache probe cost on Server5 KVM is approximately **12 ns**. Earlier drafts rounded this to “0 ns effective latency”; the current measured number is preferred for technical accuracy.
+QOMN uses FNV-1a hashing over input parameters to detect repeated calls. The measured cache probe cost on Server5 KVM is approximately **12 ns**. Earlier drafts rounded this to “0 ns effective latency”; the current measured number is preferred for technical accuracy.
 
 ---
 
 ## 4. Simulation Engine
 
-The CRYS-L simulation engine extends single-plan execution into a continuous scenario-evaluation loop with:
+The QOMN simulation engine extends single-plan execution into a continuous scenario-evaluation loop with:
 
 - structure-of-arrays execution layout,
 - physics validation,
@@ -169,16 +169,16 @@ On AVX-512 capable bare-metal hardware, projected simulation throughput is appro
 
 ## 5. Domain Coverage
 
-CRYS-L currently covers multiple deterministic engineering domains including fire protection, hydraulics, electrical, civil/structural, financial, medical, statistics, transport, sanitary systems, mechanical systems, and thermal/HVAC models. The focus is not breadth for its own sake, but providing auditable deterministic execution for repeated engineering workloads.
+QOMN currently covers multiple deterministic engineering domains including fire protection, hydraulics, electrical, civil/structural, financial, medical, statistics, transport, sanitary systems, mechanical systems, and thermal/HVAC models. The focus is not breadth for its own sake, but providing auditable deterministic execution for repeated engineering workloads.
 
 ---
 
 ## 6. Qomni Orchestrator
 
-The Qomni Orchestrator wraps CRYS-L with natural-language interpretation, routing, and explanation. In this architecture:
+The Qomni Orchestrator wraps QOMN with natural-language interpretation, routing, and explanation. In this architecture:
 
 - the LLM interprets the query,
-- CRYS-L executes deterministic calculations,
+- QOMN executes deterministic calculations,
 - Qomni formats the result, rationale, and risk explanation.
 
 This avoids using LLM inference for arithmetic that should be executed directly.
@@ -192,7 +192,7 @@ This avoids using LLM inference for arithmetic that should be executed directly.
 Benchmarks were conducted on:
 
 - **Hardware:** Server5 KVM AMD EPYC · 12 cores · 48 GB RAM · Ubuntu 24.04 LTS
-- **Runtime:** CRYS-L v2.3 RC · Rust release build · native x86-64 code generation
+- **Runtime:** QOMN v2.3 RC · Rust release build · native x86-64 code generation
 - **Measured values:** hot-path nanoseconds for selected plans, scenarios/sec for simulation engine, and HTTP loopback milliseconds for API path
 
 ### 7.2 Results Summary
@@ -209,12 +209,12 @@ Benchmarks were conducted on:
 | Pareto size | **507** |
 | HTTP loopback | **~2–4 ms** |
 
-### 7.3 CRYS-L vs GPT-4-class API
+### 7.3 QOMN vs GPT-4-class API
 
 Using the measured standard AOT result for `plan_pump_sizing`:
 
 - GPT-4-class API latency assumption: **12,000 ms**
-- CRYS-L standard AOT latency: **7.83 ns**
+- QOMN standard AOT latency: **7.83 ns**
 
 This yields an approximate speedup of:
 
@@ -226,13 +226,13 @@ This ratio is the correct current order-of-magnitude comparison for the determin
 
 ## 8. Deployment and Discussion
 
-CRYS-L is deployed as a production service behind an HTTP API. In practice, users experience milliseconds at the API layer while the core deterministic execution completes in nanoseconds. This separation is important:
+QOMN is deployed as a production service behind an HTTP API. In practice, users experience milliseconds at the API layer while the core deterministic execution completes in nanoseconds. This separation is important:
 
 - **Arithmetic cost:** nanoseconds
 - **API cost:** milliseconds
 - **Reasoning cost (LLM):** seconds
 
-This makes CRYS-L suitable as the execution substrate for technical AI systems: the LLM decides *what* is being asked, and CRYS-L computes the answer exactly.
+This makes QOMN suitable as the execution substrate for technical AI systems: the LLM decides *what* is being asked, and QOMN computes the answer exactly.
 
 ### 8.1 Current Limitations
 
@@ -254,7 +254,7 @@ This makes CRYS-L suitable as the execution substrate for technical AI systems: 
 
 ## Conclusion
 
-CRYS-L demonstrates that deterministic engineering computations should be executed, not inferred. On current measured Server5 KVM hardware, CRYS-L achieves:
+QOMN demonstrates that deterministic engineering computations should be executed, not inferred. On current measured Server5 KVM hardware, QOMN achieves:
 
 - **7.83 ns** standard AOT for `plan_pump_sizing`
 - **5.37 ns** L4 Register ABI hot-path execution
@@ -262,7 +262,7 @@ CRYS-L demonstrates that deterministic engineering computations should be execut
 - **~2–4 ms** HTTP loopback latency
 - **~1.53 billion×** speedup over a 12,000 ms GPT-4-class API call for the same deterministic result
 
-These numbers make CRYS-L a strong execution layer for hybrid AI systems where exact calculations must be fast, reproducible, and standards-traceable.
+These numbers make QOMN a strong execution layer for hybrid AI systems where exact calculations must be fast, reproducible, and standards-traceable.
 
 ---
 
@@ -276,7 +276,7 @@ These numbers make CRYS-L a strong execution layer for hybrid AI systems where e
 
 [4] American Institute of Steel Construction, *AISC 360-22: Specification for Structural Steel Buildings*.
 
-[5] Qomni AI Lab, *CRYS-L Benchmark Notes*, Server5 KVM measurements, 2026-04-16.
+[5] Qomni AI Lab, *QOMN Benchmark Notes*, Server5 KVM measurements, 2026-04-16.
 
 ---
 

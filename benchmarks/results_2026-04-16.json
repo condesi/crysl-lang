@@ -1,9 +1,9 @@
 {
-  "benchmark": "CRYS-L v2.3 — JIT L4 Register ABI + Simulation Engine (real measured)",
+  "benchmark": "QOMN v2.3 — JIT L4 Register ABI + Simulation Engine (real measured)",
   "date": "2026-04-16",
   "server": "Server5 · KVM AMD EPYC · 12-core · 48 GB RAM · Ubuntu 24.04 LTS",
   "method": "Real measured hot-path JIT latency using L4 Register ABI. Simulation engine measured using continuous SoA loop. HTTP loopback measured separately.",
-  "runtime": "CRYS-L v2.3 RC · Rust release build · Cranelift native x86-64 JIT",
+  "runtime": "QOMN v2.3 RC · Rust release build · Cranelift native x86-64 JIT",
 
   "jit_hot_path_ns": {
     "plan_pump_sizing": 5.37,

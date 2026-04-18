@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# CRYS-L v2.2 Reproducibility Benchmark
+# QOMN v2.2 Reproducibility Benchmark
 # Run on bare-metal or KVM and compare results
 # Usage: ./repro.sh [--api-url URL]
 set -euo pipefail
@@ -8,7 +8,7 @@ API="${1:-http://localhost:9001}"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 OUT="results_repro_${TIMESTAMP}.json"
 
-echo "=== CRYS-L Reproducibility Benchmark v2.2 ==="
+echo "=== QOMN Reproducibility Benchmark v2.2 ==="
 echo "Date: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 echo ""
 
@@ -33,8 +33,8 @@ echo "  AVX2:   $AVX2  AVX-512: $AVX512"
 echo "  OS:     $OS"
 echo ""
 
-# 2. CRYS-L benchmark (via API)
-echo "--- CRYS-L JIT (Cranelift + AVX2 + FMA) ---"
+# 2. QOMN benchmark (via API)
+echo "--- QOMN JIT (Cranelift + AVX2 + FMA) ---"
 CRYSL_NS=$(curl -s -X POST "$API/plan/bench" \
   -H "Content-Type: application/json" \
   -d '{"plan":"plan_pump_sizing","params":{"Q_gpm":500,"P_psi":100,"eff":0.75},"runs":10000}' \
@@ -99,7 +99,7 @@ echo "  Median latency: ${PY_NS} ns"
 
 # 5. Rust scalar baseline (compile inline)
 echo "--- Rust scalar (rustc -O3) ---"
-RUST_SRC=$(mktemp /tmp/crysl_bench_XXXXXX.rs)
+RUST_SRC=$(mktemp /tmp/qomn_bench_XXXXXX.rs)
 cat > "$RUST_SRC" << 'RSEOF'
 use std::time::Instant;
 fn pump_sizing(q_gpm: f64, p_psi: f64, eff: f64) -> (f64,f64,f64,f64,f64) {
@@ -124,7 +124,7 @@ fn main() {
     println!("{}", times[times.len()/2]);
 }
 RSEOF
-RUST_BIN=$(mktemp /tmp/crysl_bench_XXXXXX)
+RUST_BIN=$(mktemp /tmp/qomn_bench_XXXXXX)
 if rustc -O -o "$RUST_BIN" "$RUST_SRC" 2>/dev/null; then
     RUST_NS=$("$RUST_BIN")
     echo "  Median latency: ${RUST_NS} ns"
@@ -136,7 +136,7 @@ rm -f "$RUST_SRC" "$RUST_BIN"
 
 # 6. C++ baseline
 echo "--- C++ -O2 (g++) ---"
-CPP_SRC=$(mktemp /tmp/crysl_bench_XXXXXX.cpp)
+CPP_SRC=$(mktemp /tmp/qomn_bench_XXXXXX.cpp)
 cat > "$CPP_SRC" << 'CPPEOF'
 #include <iostream>
 #include <vector>
@@ -167,7 +167,7 @@ int main() {
     std::cout<<times[5000]<<std::endl;
 }
 CPPEOF
-CPP_BIN=$(mktemp /tmp/crysl_bench_XXXXXX)
+CPP_BIN=$(mktemp /tmp/qomn_bench_XXXXXX)
 if g++ -O2 -o "$CPP_BIN" "$CPP_SRC" 2>/dev/null; then
     CPP_NS=$("$CPP_BIN")
     echo "  Median latency: ${CPP_NS} ns"
@@ -180,11 +180,11 @@ rm -f "$CPP_SRC" "$CPP_BIN"
 # 7. Summary table
 echo ""
 echo "┌─────────────────────────────────────────────────────────────┐"
-echo "│ CRYS-L v2.2 Reproducibility Benchmark — pump_sizing (N=10k)│"
+echo "│ QOMN v2.2 Reproducibility Benchmark — pump_sizing (N=10k)│"
 echo "├────────────────────────┬──────────────────┬────────────────┤"
 echo "│ Implementation         │ Median Latency   │ Speedup        │"
 echo "├────────────────────────┼──────────────────┼────────────────┤"
-printf "│ %-22s │ %16s │ %14s │\n" "CRYS-L JIT (AVX2+FMA)"  "${CRYSL_NS} ns"  "1.0× (baseline)"
+printf "│ %-22s │ %16s │ %14s │\n" "QOMN JIT (AVX2+FMA)"  "${CRYSL_NS} ns"  "1.0× (baseline)"
 printf "│ %-22s │ %16s │ %14s │\n" "Rust scalar (-O3)"       "${RUST_NS} ns"   ""
 printf "│ %-22s │ %16s │ %14s │\n" "C++ -O2"                 "${CPP_NS} ns"    ""
 printf "│ %-22s │ %16s │ %14s │\n" "NumPy (Python 3)"        "${NUMPY_NS} ns"  ""
@@ -194,7 +194,7 @@ echo "└───────────────────────�
 # 8. Save JSON
 cat > "$OUT" << JSONEOF
 {
-  "benchmark": "CRYS-L v2.2 Reproducibility",
+  "benchmark": "QOMN v2.2 Reproducibility",
   "date": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
   "plan": "plan_pump_sizing",
   "params": {"Q_gpm": 500, "P_psi": 100, "eff": 0.75},
@@ -210,7 +210,7 @@ cat > "$OUT" << JSONEOF
     "os": "$OS"
   },
   "results_median_ns": {
-    "crysl_jit_avx2": $CRYSL_NS,
+    "qomn_jit_avx2": $CRYSL_NS,
     "rust_scalar_o3": "$RUST_NS",
     "cpp_o2": "$CPP_NS",
     "numpy": $NUMPY_NS,

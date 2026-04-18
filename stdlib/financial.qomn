@@ -1,7 +1,7 @@
-// CRYS-L v2 Standard Library — Financial & Fiscal (Peru)
+// QOMN v2 Standard Library — Financial & Fiscal (Peru)
 // Author:    Percy Rojas Masgo — Condesi Perú / Qomni AI Lab
-// Copyright: (c) 2026 Percy Rojas Masgo. CRYS-L language designed by Percy Rojas Masgo.
-// License:   MIT — github.com/condesi/crysl-lang
+// Copyright: (c) 2026 Percy Rojas Masgo. QOMN language designed by Percy Rojas Masgo.
+// License:   MIT — github.com/condesi/qomn-lang
 // Standards: SUNAT-TUO IGV, DL728 (Ley de Fomento del Empleo), PCGE, NIIF
 // Verified:  Server5 AMD EPYC, 2026-04-16 — plan_payroll_dl728: 503 ns JIT
 
@@ -45,7 +45,7 @@ plan_factura_peru(
 
 // ────────────────────────────────────────────────────────────────────────────
 // PLANILLA / NÓMINA — DL 728 Ley de Fomento del Empleo (Peru)
-// Benchmark: 503 ns JIT — fastest plan in CRYS-L v2.1 suite
+// Benchmark: 503 ns JIT — fastest plan in QOMN v2.1 suite
 // ────────────────────────────────────────────────────────────────────────────
 
 plan_planilla_dl728(

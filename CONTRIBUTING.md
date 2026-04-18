@@ -1,6 +1,6 @@
-# Contributing to CRYS-L
+# Contributing to QOMN
 
-CRYS-L is an open standard for deterministic engineering calculations.
+QOMN is an open standard for deterministic engineering calculations.
 We welcome contributions from engineers, developers, and researchers worldwide.
 
 ## What to Contribute
@@ -25,17 +25,17 @@ We welcome contributions from engineers, developers, and researchers worldwide.
 
 | Domain | File |
 |--------|------|
-| Hydraulics | `stdlib/hidraulica.crysl` |
-| Fire protection + electrical | `stdlib/nfpa_electrico.crysl` |
-| Structural / civil | `stdlib/civil.crysl` |
-| Mechanical | `stdlib/mecanica.crysl` |
-| Thermal / HVAC | `stdlib/termica.crysl` |
-| Sanitary / plumbing | `stdlib/sanitaria.crysl` |
-| New domain | Create `stdlib/{domain}.crysl` |
+| Hydraulics | `stdlib/hidraulica.qomn` |
+| Fire protection + electrical | `stdlib/nfpa_electrico.qomn` |
+| Structural / civil | `stdlib/civil.qomn` |
+| Mechanical | `stdlib/mecanica.qomn` |
+| Thermal / HVAC | `stdlib/termica.qomn` |
+| Sanitary / plumbing | `stdlib/sanitaria.qomn` |
+| New domain | Create `stdlib/{domain}.qomn` |
 
 ### 2. Write the plan
 
-```crysl
+```qomn
 plan_{domain}_{calculation}(
     param1: f64,           // description (unit)
     param2: f64 = default  // description with default
@@ -87,7 +87,7 @@ Create `tests/{plan_name}.json`:
 
 ```bash
 # Validate syntax
-cargo run --bin crysl-validate -- stdlib/your_domain.crysl
+cargo run --bin qomn-validate -- stdlib/your_domain.qomn
 
 # Run test vectors
 cargo test --test plan_tests -- plan_your_plan_name

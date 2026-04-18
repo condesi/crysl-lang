@@ -1,25 +1,25 @@
-# CRYS-L Runtime — Integration Guide
+# QOMN Runtime — Integration Guide
 
 ## Overview
 
-The CRYS-L runtime executes `.crysl` plan files as deterministic WASM modules.
+The QOMN runtime executes `.qomn` plan files as deterministic WASM modules.
 It is available in two forms:
 
 | Runtime | Use case | Language |
 |---------|----------|----------|
-| **CRYS-L JIT (browser)** | Client-side, no server | JavaScript + WASM |
-| **CRYS-L Evaluator (server)** | API endpoint, batch | Rust |
+| **QOMN JIT (browser)** | Client-side, no server | JavaScript + WASM |
+| **QOMN Evaluator (server)** | API endpoint, batch | Rust |
 
-Both runtimes execute the same `.crysl` programs and produce identical results.
+Both runtimes execute the same `.qomn` programs and produce identical results.
 
 ---
 
-## Browser Integration (CRYS-L JIT)
+## Browser Integration (QOMN JIT)
 
 ### 1. Load the runtime
 
 ```html
-<script src="https://qomni.clanmarketer.com/crysl/runtime.js"></script>
+<script src="https://qomni.clanmarketer.com/qomn/runtime.js"></script>
 ```
 
 ### 2. Execute a plan
@@ -63,15 +63,15 @@ console.log(result.meta.standard);  // "NFPA 20:2022..."
 
 ## Server API (Qomni Engine — proprietary)
 
-When embedded in the Qomni Engine, CRYS-L plans are triggered automatically
+When embedded in the Qomni Engine, QOMN plans are triggered automatically
 by the planner when a query matches a known domain + numeric pattern.
 
-**You do not need to call CRYS-L plans directly** — the planner routes to them.
+**You do not need to call QOMN plans directly** — the planner routes to them.
 
 For direct HTTP access (if your Qomni instance is running):
 
 ```bash
-curl -X POST https://your-qomni-host/crysl/execute \
+curl -X POST https://your-qomni-host/qomn/execute \
   -H "Content-Type: application/json" \
   -d '{
     "plan": "plan_pump_sizing",
@@ -88,11 +88,11 @@ For server-side integration without the full Qomni Engine:
 ```toml
 # Cargo.toml
 [dependencies]
-crysl-eval = { git = "https://github.com/condesi/crysl-lang", path = "runtime/crysl-eval" }
+qomn-eval = { git = "https://github.com/condesi/qomn-lang", path = "runtime/qomn-eval" }
 ```
 
 ```rust
-use crysl_eval::{CrysLEval, PlanInputs};
+use qomn_eval::{CrysLEval, PlanInputs};
 
 let eval = CrysLEval::from_stdlib("nfpa_electrico")?;
 let mut inputs = PlanInputs::new();
@@ -107,7 +107,7 @@ println!("HP required: {}", result.get("HP_req").unwrap());
 
 ## Error Handling
 
-CRYS-L runtime returns structured errors for assertion failures:
+QOMN runtime returns structured errors for assertion failures:
 
 ```json
 {
@@ -130,8 +130,8 @@ CRYS-L runtime returns structured errors for assertion failures:
 
 ## Adding Plans to the Runtime
 
-1. Write your plan in `stdlib/{domain}.crysl`
-2. Run the validator: `cargo run --bin crysl-validate -- stdlib/your_domain.crysl`
+1. Write your plan in `stdlib/{domain}.qomn`
+2. Run the validator: `cargo run --bin qomn-validate -- stdlib/your_domain.qomn`
 3. Run tests: `cargo test --test plan_tests`
 4. Submit PR — all valid plans are automatically compiled to WASM and included
 

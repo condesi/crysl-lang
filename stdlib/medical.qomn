@@ -1,9 +1,9 @@
-// CRYS-L v2 Standard Library — Medical / Clinical Engineering
+// QOMN v2 Standard Library — Medical / Clinical Engineering
 // Author:    Percy Rojas Masgo — Condesi Perú / Qomni AI Lab
-// Copyright: (c) 2026 Percy Rojas Masgo. CRYS-L language designed by Percy Rojas Masgo.
-// License:   MIT — github.com/condesi/crysl-lang
+// Copyright: (c) 2026 Percy Rojas Masgo. QOMN language designed by Percy Rojas Masgo.
+// License:   MIT — github.com/condesi/qomn-lang
 // Standards: EN 285, ISO 13485, ISO 17665, WHO EML, OMS/MINSA Peru
-// WARNING:   CRYS-L results are decision-support only. All clinical
+// WARNING:   QOMN results are decision-support only. All clinical
 //            calculations MUST be reviewed by a licensed medical professional.
 
 // ────────────────────────────────────────────────────────────────────────────

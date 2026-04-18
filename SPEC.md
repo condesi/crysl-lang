@@ -1,4 +1,4 @@
-# CRYS-L v2 — Language Specification
+# QOMN v2 — Language Specification
 
 **Author:** Percy Rojas Masgo — Condesi Perú / Qomni AI Lab
 **Version:** 2.2 · **License:** MIT · **Date:** April 2026
@@ -33,10 +33,10 @@
 
 ## 1. Overview
 
-CRYS-L (Crystal Language) is a **declarative domain-specific language** for
+QOMN (QOMN Language) is a **declarative domain-specific language** for
 expressing deterministic engineering calculations as self-contained *plan programs*.
 
-A CRYS-L program:
+A QOMN program:
 - Accepts typed numeric parameters
 - Computes intermediate values via arithmetic expressions
 - Validates inputs via assertions
@@ -44,18 +44,18 @@ A CRYS-L program:
 - Embeds metadata (standard, source, domain) for traceability
 - Compiles to WASM and executes deterministically — **no randomness, no LLM**
 
-A single `.crysl` file may contain multiple `plan_*` declarations.
+A single `.qomn` file may contain multiple `plan_*` declarations.
 
 ---
 
 > ### Quick Start for Engineers (non-programmers)
 >
-> You do not need to know Rust, Python, or any programming language to write a CRYS-L plan.
-> If you can write an engineering formula in a spreadsheet, you can write a CRYS-L plan.
+> You do not need to know Rust, Python, or any programming language to write a QOMN plan.
+> If you can write an engineering formula in a spreadsheet, you can write a QOMN plan.
 >
 > **Minimal viable plan — 10 lines with annotations:**
 >
-> ```crysl
+> ```qomn
 > plan_pipe_velocity(            // 1. Name your calculation
 >     Q_lps: f64,                // 2. Declare inputs with type (f64 = decimal number)
 >     D_mm:  f64                 // 3. One input per line; add a comment explaining units
@@ -76,7 +76,7 @@ A single `.crysl` file may contain multiple `plan_*` declarations.
 > }
 > ```
 >
-> That is a complete, runnable CRYS-L plan. Send it to the API and receive an exact answer
+> That is a complete, runnable QOMN plan. Send it to the API and receive an exact answer
 > with the standard cited — no spreadsheet errors, no approximations.
 
 ---
@@ -171,7 +171,7 @@ Comparison operators are valid only inside `assert` expressions.
 
 ## 3. Type System
 
-CRYS-L v2 is **statically typed** with five value types:
+QOMN v2 is **statically typed** with five value types:
 
 | Type | Size | Range | Use |
 |------|------|-------|-----|
@@ -189,7 +189,7 @@ CRYS-L v2 is **statically typed** with five value types:
 
 ### 3.1 Type Coercion Rules
 
-CRYS-L performs automatic (implicit) type coercion in the following cases:
+QOMN performs automatic (implicit) type coercion in the following cases:
 
 **Automatic (safe) coercions:**
 
@@ -230,7 +230,7 @@ The `str` type is used exclusively for metadata, labels, messages, and formula d
 - `str`-typed input parameters (for mode/type flags passed as metadata)
 
 **Example:**
-```crysl
+```qomn
 plan_check_mode(mode: str = "strict") {
     meta { standard: "Internal", source: "§1", domain: "util", version: "2.2", }
     assert mode == "strict" || mode == "lenient" msg "mode must be strict or lenient";
@@ -314,7 +314,7 @@ expressions are not allowed as defaults in v2.
 **Parameter Ordering Rule:** Parameters with default values must appear after
 all required (non-default) parameters. This is enforced at parse time.
 
-```crysl
+```qomn
 // VALID — required parameters first, then optional with defaults
 plan_example(x: f64, y: f64, z: f64 = 1.0) { ... }
 
@@ -345,7 +345,7 @@ meta {
 | `standard` | Yes | Full name of the applicable standard |
 | `source` | Yes | Specific section, table, or clause |
 | `domain` | Yes | One of: hidraulica, nfpa_electrico, civil, mecanica, termica, sanitaria, electrical, financial, medical, statistics, transport |
-| `version` | Yes | CRYS-L spec version string, e.g. `"2.2"` |
+| `version` | Yes | QOMN spec version string, e.g. `"2.2"` |
 | `note` | No | Optional clarification |
 
 **The `meta` block is REQUIRED** and must appear as the **first item** in the
@@ -370,7 +370,7 @@ Declares a compile-time constant. By convention, constant names use
 UPPER_SNAKE_CASE. Constants are evaluated before any `let` expression
 and cannot reference `let` variables.
 
-```crysl
+```qomn
 const GPM_TO_LPS = 0.06309;
 const PI         = 3.14159265358979;
 const KPA_TO_M   = 0.10197;
@@ -381,7 +381,7 @@ declarations, and `let` declarations within a plan. A `const` or `let`
 binding cannot shadow an input parameter or any prior declaration in the
 same plan. Violation produces a parse error.
 
-```crysl
+```qomn
 // INVALID — shadowing parameter with let
 plan_bad(x: f64) {
     let x = 2.0;   // parse error: 'x' already defined as parameter
@@ -406,7 +406,7 @@ Declares a computed intermediate value. `let` variables are evaluated in
 declaration order. A `let` may reference previously declared `let` and
 `const` values, and all input parameters.
 
-```crysl
+```qomn
 let Q_lps  = Q_gpm * GPM_TO_LPS;
 let H_m    = P_psi * PSI_TO_M;
 let HP_req = (Q_lps * H_m) / (eff * 76.04);
@@ -425,7 +425,7 @@ Declares a named formula string for documentation and audit trail purposes.
 The formula string is not evaluated — it is stored as metadata and returned
 in the response alongside computed values.
 
-```crysl
+```qomn
 formula "Pump power":       "HP = (Q[L/s] × H[m]) / (η × 76.04)";
 formula "NFPA shutoff":     "HP_shutoff ≤ 1.40 × HP_rated";
 formula "Voltage drop":     "ΔV = 2·ρ·L·I / S";
@@ -444,7 +444,7 @@ Asserts that an input or computed value satisfies a condition. If the
 assertion fails at runtime, execution halts and an error is returned with
 the message string. No partial outputs are emitted.
 
-```crysl
+```qomn
 assert Q_gpm  > 0.0     msg "flow must be positive (GPM)";
 assert eff    > 0.0     msg "efficiency must be > 0";
 assert eff    <= 1.0    msg "efficiency must be ≤ 1.0";
@@ -458,7 +458,7 @@ assert Q_gpm  <= 5000.0 msg "flow exceeds NFPA 20 Table 4.26 max";
 - Multiple assertions are evaluated in declaration order; first failure stops
 
 **Compound assertions:**
-```crysl
+```qomn
 assert fp > 0.0 && fp <= 1.0 msg "power factor must be in (0, 1]";
 ```
 
@@ -473,7 +473,7 @@ assert fp > 0.0 && fp <= 1.0 msg "power factor must be in (0, 1]";
 Comparison operators (`>`, `<`, `>=`, `<=`, `==`, `!=`) are always evaluated
 before any logical operator. Parentheses may be used to override precedence.
 
-```crysl
+```qomn
 // a > 0 is evaluated first, then negated, then ANDed with b < 10
 assert !a > 0.0 && b < 10.0 msg "...";
 
@@ -491,7 +491,7 @@ output <identifier> label "<label>";
 Declares a value to be included in the plan response. The identifier must
 reference a previously declared `let` or `const` value, or an input parameter.
 
-```crysl
+```qomn
 output HP_req   label "Required HP"              unit "HP";
 output HP_max   label "Max shutoff HP (NFPA 20)" unit "HP";
 output Q_lps    label "Flow rate"                unit "L/s";
@@ -539,7 +539,7 @@ exponentiation. This follows the mathematical convention:
 This differs from some languages (e.g., Python, where `-2**2 = -4` by same
 convention). To square a negative number, use parentheses: `(-2.0) ^ 2.0 = 4.0`.
 
-```crysl
+```qomn
 let x = 2.0 + 3.0 * 4.0;     // 14.0
 let y = pow(2.0, 3.0);        // 8.0
 let z = (2.0 + 3.0) * 4.0;   // 20.0
@@ -552,7 +552,7 @@ Division by zero produces a runtime error, not `NaN` or `Inf`.
 
 ### 6.3 Modulo
 
-```crysl
+```qomn
 let r = 10.0 % 3.0;   // 1.0
 ```
 
@@ -596,7 +596,7 @@ declarations (rather than bare literals) improves readability and traceability.
 | `0.0172` | Ω·mm²/m | Copper resistivity ρ at 20°C (IEC 60228) |
 
 Example usage:
-```crysl
+```qomn
 const GPM_TO_LPS = 0.06309;   // 1 gpm = 0.06309 L/s
 const PSI_TO_M   = 0.70307;   // 1 psi = 0.70307 m.c.a.
 formula "HP conversion": "76.04 kgf·m/s = 1 HP (metric)";
@@ -632,7 +632,7 @@ with different inputs execute the cached module — no recompilation.
 
 ### 8.3 Determinism
 
-CRYS-L execution is **strictly deterministic**:
+QOMN execution is **strictly deterministic**:
 - Same inputs always produce identical outputs (bit-for-bit)
 - No random number generation
 - No I/O, network calls, or filesystem access from within a plan
@@ -750,11 +750,11 @@ Future versions maintain backward compatibility — v1 plans are valid v2 plans.
 
 ## 12. Compiler Architecture
 
-CRYS-L is compiled through a multi-stage pipeline:
+QOMN is compiled through a multi-stage pipeline:
 
 ### 12.1 Parser
 - Strategy: **recursive descent**, single-pass
-- Input: UTF-8 `.crysl` source text
+- Input: UTF-8 `.qomn` source text
 - Output: HIR (High-level Intermediate Representation) — a typed AST
 
 ### 12.2 Intermediate Representation
@@ -777,17 +777,17 @@ CRYS-L is compiled through a multi-stage pipeline:
 
 ## 13. Development Tools
 
-Planned tooling for the CRYS-L ecosystem:
+Planned tooling for the QOMN ecosystem:
 
 | Tool | Command | Status |
 |------|---------|--------|
-| Type/syntax checker | `crysl check <file.crysl>` | Planned |
-| Code formatter | `crysl fmt <file.crysl>` | Planned |
-| Interactive shell | `crysl repl` | Planned |
-| Plan runner | `crysl run <plan> [args]` | Available (via REST API) |
-| Benchmark harness | `crysl bench <plan>` | Available |
+| Type/syntax checker | `qomn check <file.qomn>` | Planned |
+| Code formatter | `qomn fmt <file.qomn>` | Planned |
+| Interactive shell | `qomn repl` | Planned |
+| Plan runner | `qomn run <plan> [args]` | Available (via REST API) |
+| Benchmark harness | `qomn bench <plan>` | Available |
 
-The `crysl check` tool will report:
+The `qomn check` tool will report:
 - Parse errors (syntax)
 - Type errors (e.g., `str` in arithmetic)
 - Shadowing violations
@@ -826,4 +826,4 @@ The `crysl check` tool will report:
 
 ---
 
-*CRYS-L v2.2 Specification — Copyright (c) 2026 Percy Rojas Masgo — MIT License*
+*QOMN v2.2 Specification — Copyright (c) 2026 Percy Rojas Masgo — MIT License*

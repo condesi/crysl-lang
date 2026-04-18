@@ -1,8 +1,8 @@
-# CRYS-L v2.3 — Crystal Language
+# QOMN v2.3 — QOMN Language
 
 **Created by Percy Rojas Masgo — Condesi Perú / Qomni AI Lab**
 **Open standard for deterministic engineering calculations.**
-MIT License · [Live Demo](https://qomni.clanmarketer.com/crysl/) · [Paper](paper/CRYSL_JIT_Paper_2026.md)
+MIT License · [Live Demo](https://qomni.clanmarketer.com/qomn/) · [Paper](paper/CRYSL_JIT_Paper_2026.md)
 **Spec v2.3 RC** — Cranelift native JIT, L4 Register ABI, OracleCache, simulation engine, 13 stdlib domains.
 
 > Write an engineering calculation once. Get **exact answers** in **nanoseconds on the JIT hot path**,
@@ -13,7 +13,7 @@ MIT License · [Live Demo](https://qomni.clanmarketer.com/crysl/) · [Paper](pap
 ## Quick Start — Try It Now
 
 **Online (browser, no install):**
-👉 [qomni.clanmarketer.com/crysl/](https://qomni.clanmarketer.com/crysl/)
+👉 [qomni.clanmarketer.com/qomn/](https://qomni.clanmarketer.com/qomn/)
 
 ```
 plan_pump_sizing(500, 100, 0.75)
@@ -25,9 +25,9 @@ plan_pump_sizing(500, 100, 0.75)
 
 ---
 
-## Why CRYS-L?
+## Why QOMN?
 
-| Question | LLM (GPT-4 Turbo) | CRYS-L v2.3 JIT |
+| Question | LLM (GPT-4 Turbo) | QOMN v2.3 JIT |
 |----------|-------------------|-----------------|
 | "500 gpm pump at 100 psi, 75% eff — HP?" | ~17 HP (approximate) | **16.835 HP** (deterministic) |
 | Standard cited? | Not guaranteed | NFPA 20:2022 §4.26 |
@@ -37,7 +37,7 @@ plan_pump_sizing(500, 100, 0.75)
 | Works offline? | No | Yes |
 | Cost per call | API/token cost | **Free local execution** |
 
-**Measured on Server5 KVM AMD EPYC, 2026-04-16:** CRYS-L v2.3 L4 Register ABI executes selected engineering plans in **5.37–10.69 ns** on the JIT hot path. The simulation engine sustains **13.0M scenarios/sec** on the same KVM host.
+**Measured on Server5 KVM AMD EPYC, 2026-04-16:** QOMN v2.3 L4 Register ABI executes selected engineering plans in **5.37–10.69 ns** on the JIT hot path. The simulation engine sustains **13.0M scenarios/sec** on the same KVM host.
 
 ---
 
@@ -66,7 +66,7 @@ Full data: [`benchmarks/results_2026-04-16.json`](benchmarks/results_2026-04-16.
 ### Methodology
 
 - Hardware: Server5 KVM AMD EPYC · 12 cores · 48GB RAM · Contabo VPS · Ubuntu 24.04 LTS
-- Runtime: CRYS-L v2.3 RC · Rust release build · Cranelift native x86-64 JIT · L4 Register ABI
+- Runtime: QOMN v2.3 RC · Rust release build · Cranelift native x86-64 JIT · L4 Register ABI
 - Hot-path metric: measured nanoseconds, HTTP excluded
 - API metric: measured HTTP loopback path, including TCP + HTTP parse overhead
 - Simulation metric: continuous SoA AVX2 loop with physics validation and Pareto ranking
@@ -86,9 +86,9 @@ Full data: [`benchmarks/results_2026-04-16.json`](benchmarks/results_2026-04-16.
 
 > Note: older paper drafts referenced an **86.4M scenarios/sec** simulation figure from an earlier benchmark methodology. The current reproducible Server5 KVM measurement is **13.0M scenarios/sec** and should be treated as the authoritative v2.3 RC number.
 
-### Why CRYS-L vs C++/Rust?
+### Why QOMN vs C++/Rust?
 
-Pure C++/Rust achieve excellent raw arithmetic performance, but CRYS-L adds:
+Pure C++/Rust achieve excellent raw arithmetic performance, but QOMN adds:
 - **Standards traceability** — every formula cites NFPA/IEC/ISO
 - **Physics validation** — inputs and outputs checked against domain bounds
 - **Multi-objective optimization** — Pareto-ranked scenario sweeps
@@ -97,7 +97,7 @@ Pure C++/Rust achieve excellent raw arithmetic performance, but CRYS-L adds:
 
 ### Real Case: ACI Fire System Optimization
 
-See [`examples/aci_optimizado_completo.crysl`](examples/aci_optimizado_completo.crysl) for a complete multi-plan optimization of a 5-floor office building fire suppression system with:
+See [`examples/aci_optimizado_completo.qomn`](examples/aci_optimizado_completo.qomn) for a complete multi-plan optimization of a 5-floor office building fire suppression system with:
 - NFPA 13-2022 sprinkler demand constraints
 - NFPA 20-2022 pump selection rules
 - Annual energy cost model
@@ -109,7 +109,7 @@ Full baseline data: [`benchmarks/baseline_comparison_2026-04-16.json`](benchmark
 
 ## How It Works
 
-CRYS-L describes *what to compute*, not how. The runtime compiles each plan via Cranelift JIT
+QOMN describes *what to compute*, not how. The runtime compiles each plan via Cranelift JIT
 to native x86-64 machine code and executes the hot path through the L4 Register ABI:
 
 ```
@@ -125,7 +125,7 @@ Compare to LLM: tokenize → model inference → autoregressive decode → secon
 
 ## Write a Plan in 20 Lines
 
-```crysl
+```qomn
 plan_pump_sizing(
     Q_gpm: f64,           // required flow (GPM)
     P_psi: f64,           // required pressure (PSI)
@@ -155,11 +155,11 @@ plan_pump_sizing(
 
 ## Standard Library (v2.3 — 13 Domains, 35+ Plans)
 
-> **CRYS-L has no domain limit.** These 13 domains are the current stdlib.
-> Any deterministic calculation expressible as a formula can become a CRYS-L plan.
+> **QOMN has no domain limit.** These 13 domains are the current stdlib.
+> Any deterministic calculation expressible as a formula can become a QOMN plan.
 
 ### Fire Protection (NFPA)
-`stdlib/nfpa_electrico.crysl`
+`stdlib/nfpa_electrico.qomn`
 
 | Plan | Formula | Standard |
 |------|---------|---------|
@@ -168,7 +168,7 @@ plan_pump_sizing(
 | `plan_hose_stream(class)` | Q_hose by occupancy class | NFPA 13 Table 11.2 |
 
 ### Hydraulics (IS.010 Peru / AWWA)
-`stdlib/hidraulica.crysl`
+`stdlib/hidraulica.qomn`
 
 | Plan | Formula | Standard |
 |------|---------|---------|
@@ -177,7 +177,7 @@ plan_pump_sizing(
 | `plan_pipe_sizing(Q, v_max)` | D = √(4Q/πv) | IS.010 Peru |
 
 ### Electrical (IEC 60364 / NEC 2023 / IEEE 141)
-`stdlib/electrical.crysl`
+`stdlib/electrical.qomn`
 
 | Plan | Formula | Standard |
 |------|---------|---------|
@@ -187,7 +187,7 @@ plan_pump_sizing(
 | `plan_power_factor_correction(P_kw, pf_current, pf_target, V)` | Q_c = P·(tan φ₁ − tan φ₂) | IEC 60076 |
 
 ### Civil / Structural (AISC 360 / ACI 318 / ASCE 7)
-`stdlib/civil.crysl`
+`stdlib/civil.qomn`
 
 | Plan | Formula | Standard |
 |------|---------|---------|
@@ -196,7 +196,7 @@ plan_pump_sizing(
 | `plan_column_capacity(b, h, fc, fy, rho)` | Pn = 0.85·f'c·Ac + fy·Ast | ACI 318-19 §22.4 |
 
 ### Financial (SUNAT / DL 728 Peru / NIIF)
-`stdlib/financial.crysl`
+`stdlib/financial.qomn`
 
 | Plan | Formula | Standard |
 |------|---------|---------|
@@ -206,9 +206,9 @@ plan_pump_sizing(
 | `plan_loan_amortization(P, r_monthly, n_months)` | C = P·r·(1+r)ⁿ/((1+r)ⁿ−1) | Sistema Francés / SBS 2024 |
 
 ### Medical / Clinical (EN 285 / ISO 17665 / WHO)
-`stdlib/medical.crysl`
+`stdlib/medical.qomn`
 
-> ⚠️ CRYS-L medical results are decision-support only. All clinical calculations must be reviewed by a licensed professional.
+> ⚠️ QOMN medical results are decision-support only. All clinical calculations must be reviewed by a licensed professional.
 
 | Plan | Formula | Standard |
 |------|---------|---------|
@@ -217,7 +217,7 @@ plan_pump_sizing(
 | `plan_drug_dosing(weight_kg, dose_mg_per_kg, frequency_per_day)` | Dose = weight × mg/kg | WHO EML 2008 |
 
 ### Statistics (ISO 3534 / ASTM E2586)
-`stdlib/statistics.crysl`
+`stdlib/statistics.qomn`
 
 | Plan | Formula | Standard |
 |------|---------|---------|
@@ -225,7 +225,7 @@ plan_pump_sizing(
 | `plan_sample_size(confidence, margin, proportion, population)` | n₀ = z²·p(1−p)/e², FPC correction | ISO 3534-2 / Cochran 1977 |
 
 ### Transport & Logistics (MTC Peru / IPCC)
-`stdlib/transport.crysl`
+`stdlib/transport.qomn`
 
 | Plan | Formula | Standard |
 |------|---------|---------|
@@ -233,7 +233,7 @@ plan_pump_sizing(
 | `plan_fuel_cost(distance_km, consume_l_100, fuel_price)` | Cost = gallons × price | OSINERGMIN 2024 |
 
 ### Hydraulics — Sanitary (IS.010 Peru)
-`stdlib/sanitaria.crysl`
+`stdlib/sanitaria.qomn`
 
 | Plan | Formula | Standard |
 |------|---------|---------|
@@ -242,7 +242,7 @@ plan_pump_sizing(
 | `plan_drainage_pipe(flow_lps, slope, n_roughness)` | D = [Q·n·4^(2/3) / ((π/4)·S^(1/2))]^(3/8) | IS.010 §6.2 / Manning |
 
 ### Mechanical (ISO / ASME / AGMA)
-`stdlib/mecanica.crysl`
+`stdlib/mecanica.qomn`
 
 | Plan | Formula | Standard |
 |------|---------|---------|
@@ -251,7 +251,7 @@ plan_pump_sizing(
 | `plan_gear_ratio(n_input, n_output, T_input_nm)` | T_out = T_in × (n_in/n_out) | AGMA 2001-D04 / ISO 6336 |
 
 ### Thermal / HVAC (ISO 6946 / ASHRAE)
-`stdlib/termica.crysl`
+`stdlib/termica.qomn`
 
 | Plan | Formula | Standard |
 |------|---------|---------|
@@ -287,7 +287,7 @@ Built-ins: `sqrt`, `pow`, `abs`, `min`, `max`, `clamp`, `log`, `log10`, `round`,
 ## Repository Structure
 
 ```
-crysl-lang/
+qomn-lang/
 ├── SPEC.md                      # Full language specification
 ├── ORIGINALITY.md               # Language originality statement
 ├── LIMITATIONS.md               # Known limitations and safety boundaries
@@ -297,24 +297,24 @@ crysl-lang/
 │   ├── CRYSL_JIT_Paper_2026.md  # IEEE-style research paper
 │   └── main.tex                 # LaTeX version
 ├── stdlib/
-│   ├── hidraulica.crysl
-│   ├── nfpa_electrico.crysl
-│   ├── civil.crysl
-│   ├── electrical.crysl
-│   ├── financial.crysl
-│   ├── medical.crysl
-│   ├── statistics.crysl
-│   ├── transport.crysl
-│   ├── mecanica.crysl
-│   ├── termica.crysl
-│   └── sanitaria.crysl
+│   ├── hidraulica.qomn
+│   ├── nfpa_electrico.qomn
+│   ├── civil.qomn
+│   ├── electrical.qomn
+│   ├── financial.qomn
+│   ├── medical.qomn
+│   ├── statistics.qomn
+│   ├── transport.qomn
+│   ├── mecanica.qomn
+│   ├── termica.qomn
+│   └── sanitaria.qomn
 ├── runtime/
 │   ├── interpreter.md
 │   └── integration_guide.md
 ├── examples/
-│   ├── hello_pump.crysl
-│   ├── hello_hazen.crysl
-│   └── hello_cable.crysl
+│   ├── hello_pump.qomn
+│   ├── hello_hazen.qomn
+│   └── hello_cable.qomn
 ├── benchmarks/
 │   └── results_2026-04-16.json  # v2.3 RC measured Server5 KVM data
 └── README.md
@@ -325,7 +325,7 @@ crysl-lang/
 ## Contribute a Plan
 
 1. Fork this repo
-2. Write your plan in `stdlib/{domain}.crysl`
+2. Write your plan in `stdlib/{domain}.qomn`
 3. Add test vectors in `benchmarks/tests/{plan_name}.json`
 4. Submit PR — all valid plans following the grammar are welcome
 
@@ -340,7 +340,7 @@ crysl-lang/
 
 ## Creator
 
-**CRYS-L was designed and created by Percy Rojas Masgo** (Condesi Perú / Qomni AI Lab) in 2025–2026.
+**QOMN was designed and created by Percy Rojas Masgo** (Condesi Perú / Qomni AI Lab) in 2025–2026.
 
 The language, grammar, compiler architecture, and standard library are original works.
 No content has been adapted or copied from third-party tools, languages, or libraries.
@@ -356,7 +356,7 @@ standards document.
 
 **Copyright (c) 2026 Percy Rojas Masgo — Condesi Perú / Qomni AI Lab**
 
-CRYS-L language spec, grammar, standard library, examples: **MIT License**
+QOMN language spec, grammar, standard library, examples: **MIT License**
 
 The Qomni Engine runtime integration is proprietary.
 The language itself — grammar, stdlib plans, this repo — is fully open.
@@ -367,13 +367,13 @@ See [LICENSE](LICENSE) for full terms and [ORIGINALITY.md](ORIGINALITY.md) for t
 
 ## Open Language Initiative
 
-CRYS-L is released as a fully open specification and implementation.
+QOMN is released as a fully open specification and implementation.
 
 **License:** MIT — free use, modification, and integration into commercial systems.
 
 **Objective:** Become the standard execution layer for deterministic AI computations.
 
-**What CRYS-L enables:**
+**What QOMN enables:**
 - Deterministic computation via Cranelift native JIT and L4 Register ABI
 - Physics-as-Oracle (PaO): equations as primary source of truth
 - OracleCache: FNV-1a measured cache probe around ~12 ns on Server5 KVM
@@ -381,10 +381,10 @@ CRYS-L is released as a fully open specification and implementation.
 - Continuous simulation engine: 13.0M scenarios/sec measured on Server5 KVM
 
 **Important distinction:**
-- CRYS-L (language, compiler, runtime, stdlib) — **open MIT**
+- QOMN (language, compiler, runtime, stdlib) — **open MIT**
 - Qomni Engine (planner, learning loop, retrieval engine) — **proprietary**
 
-Opening CRYS-L creates adoption. Keeping Qomni's cognitive engine closed preserves the architectural advantage.
+Opening QOMN creates adoption. Keeping Qomni's cognitive engine closed preserves the architectural advantage.
 Same model: Linux + cloud vendors, TensorFlow + Google, LLVM + Apple.
 
 ---
@@ -397,7 +397,7 @@ Qomni is an independent research effort advancing a new paradigm in AI systems:
 > AI should think only when necessary. Everything else should be executed.
 
 If you believe in a future where AI is faster, more efficient, less dependent on massive models,
-and accessible everywhere — contribute to CRYS-L or reach out:
+and accessible everywhere — contribute to QOMN or reach out:
 [percy@condesi.pe](mailto:percy@condesi.pe)
 
 ---
@@ -405,18 +405,18 @@ and accessible everywhere — contribute to CRYS-L or reach out:
 ## Citation
 
 ```bibtex
-@article{rojasmasgo2026crysl,
-  title   = {CRYS-L: A Domain-Specific Language for Deterministic Engineering
+@article{rojasmasgo2026qomn,
+  title   = {QOMN: A Domain-Specific Language for Deterministic Engineering
              Calculations at Nanosecond-Scale Latency},
   author  = {Rojas Masgo, Percy and {Qomni AI Lab}},
   year    = {2026},
   month   = {April},
   note    = {Open Standard, MIT License. Server5 KVM AMD EPYC benchmark: 5.37–10.69 ns JIT hot path; 13.0M scenarios/sec simulation engine},
-  url     = {https://github.com/condesi/crysl-lang}
+  url     = {https://github.com/condesi/qomn-lang}
 }
 ```
 
 ---
 
 *Built by Percy Rojas Masgo · CEO Condesi Perú · Qomni AI Lab*
-*Live at [qomni.clanmarketer.com/crysl/](https://qomni.clanmarketer.com/crysl/)*
+*Live at [qomni.clanmarketer.com/qomn/](https://qomni.clanmarketer.com/qomn/)*

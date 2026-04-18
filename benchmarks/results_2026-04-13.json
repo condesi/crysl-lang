@@ -1,11 +1,11 @@
 {
-  "benchmark": "CRYS-L v2 — Execution Latency vs LLM Baseline",
+  "benchmark": "QOMN v2 — Execution Latency vs LLM Baseline",
   "date": "2026-04-13",
   "server": "Server5 (AMD EPYC 12-core, 48GB RAM, 500GB NVMe)",
   "method": "5 runs each, mean reported",
-  "note": "CRYS-L times include HTTP request + JSON parsing + WASM execute + format. LLM times include full inference (GPT-4o and commercial LLM API observed).",
+  "note": "QOMN times include HTTP request + JSON parsing + WASM execute + format. LLM times include full inference (GPT-4o and commercial LLM API observed).",
 
-  "crysl_plans": [
+  "qomn_plans": [
     {
       "plan": "plan_pump_sizing",
       "domain": "nfpa_electrico",
@@ -32,7 +32,7 @@
       "inputs": {"P_kw": 75, "V": 380, "L": 120, "fp": 0.90},
       "runs_ms": [130, 118, 113, 127, 112],
       "mean_ms": 120,
-      "route": "crysl-jit-v2.1",
+      "route": "qomn-jit-v2.1",
       "result_exact": true,
       "result": {"I": 219.3, "S_min": 27.8, "drop_pct": 3.0}
     },
@@ -42,7 +42,7 @@
       "inputs": {"P_kw": 200, "fp": 0.85, "fu": 0.80},
       "runs_ms": [89, 92, 87, 95, 88],
       "mean_ms": 90,
-      "route": "crysl-jit-v2.1",
+      "route": "qomn-jit-v2.1",
       "result_exact": true,
       "result": {"S_required": 188.2, "S_design": 216.4}
     },
@@ -52,7 +52,7 @@
       "inputs": {"w": 20.0, "L": 6.0, "E": 25.0, "I": 15000.0},
       "runs_ms": [74, 69, 78, 71, 73],
       "mean_ms": 73,
-      "route": "crysl-jit-v2.1",
+      "route": "qomn-jit-v2.1",
       "result_exact": true,
       "result": {"delta": 0.00270, "delta_allow": 0.01667, "M_max": 90.0}
     }
@@ -63,7 +63,7 @@
     "runs_ms": [12400, 9800, 14100, 11200, 10900],
     "mean_ms": 11680,
     "result_exact": false,
-    "note": "LLM answers vary ±15-25% across runs; CRYS-L answers are bit-identical"
+    "note": "LLM answers vary ±15-25% across runs; QOMN answers are bit-identical"
   },
 
   "python_baseline": {
@@ -82,12 +82,12 @@
   },
 
   "summary": {
-    "crysl_mean_ms": 124,
+    "qomn_mean_ms": 124,
     "llm_mean_ms": 11680,
     "python_mean_ms": 869,
     "speedup_vs_llm": "94x",
     "speedup_vs_python": "7x",
-    "crysl_accuracy": "100% exact (deterministic WASM)",
+    "qomn_accuracy": "100% exact (deterministic WASM)",
     "llm_accuracy": "approx ±15-25% numerical error",
     "llm_bypass_rate": "100%"
   }

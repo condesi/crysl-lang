@@ -1,7 +1,7 @@
-// CRYS-L v2 Standard Library — Thermal Engineering (HVAC & Heat Transfer)
+// QOMN v2 Standard Library — Thermal Engineering (HVAC & Heat Transfer)
 // Author:    Percy Rojas Masgo — Condesi Perú / Qomni AI Lab
-// Copyright: (c) 2026 Percy Rojas Masgo. CRYS-L language designed by Percy Rojas Masgo.
-// License:   MIT — github.com/condesi/crysl-lang
+// Copyright: (c) 2026 Percy Rojas Masgo. QOMN language designed by Percy Rojas Masgo.
+// License:   MIT — github.com/condesi/qomn-lang
 // Note:      Formulas are mathematical laws (public domain). Implementations are original.
 //            Standards cited by name/section only — no text copied from copyrighted documents.
 // Standards: ISO 6946:2017, ASHRAE 140-2017, EN 14511:2018, ASHRAE Fundamentals 2021

@@ -1,4 +1,4 @@
-// CRYS-L v2.2 — Sistema ACI Completo (Automatic Fire Suppression)
+// QOMN v2.2 — Sistema ACI Completo (Automatic Fire Suppression)
 // Real case: 5-story office building, 2000 m² per floor
 // Hazard: Ordinary Hazard Group 2 (OHG-2), NFPA 13 §11.2
 // Four interconnected plans: demand → pump → energy → optimization
@@ -460,7 +460,7 @@ plan_aci_optimization_target(
 // USAGE INSTRUCTIONS
 // ────────────────────────────────────────────────────────────────────────────
 //
-// Execute plans in sequence via the CRYS-L API:
+// Execute plans in sequence via the QOMN API:
 //
 // Step 1 — Sprinkler demand (NFPA 13):
 //   POST /plan/run

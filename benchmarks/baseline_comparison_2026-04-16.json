@@ -1,5 +1,5 @@
 {
-  "title": "CRYS-L v2.2 Baseline Comparison — pump_sizing benchmark",
+  "title": "QOMN v2.2 Baseline Comparison — pump_sizing benchmark",
   "date": "2026-04-16",
   "methodology": {
     "plan": "plan_pump_sizing",
@@ -12,13 +12,13 @@
   },
   "results": [
     {
-      "name": "CRYS-L v2.2 (JIT Cranelift + AVX2 + FMA3 + L1-blocked)",
+      "name": "QOMN v2.2 (JIT Cranelift + AVX2 + FMA3 + L1-blocked)",
       "median_ns": 7,
       "notes": "OracleCache hit path (identical inputs). Cold JIT: 38-98ns. SCHED_FIFO prio 50, CPUAffinity 10-11.",
       "source": "Measured 2026-04-16 on Server5"
     },
     {
-      "name": "CRYS-L v2.2 (JIT cold, no cache)",
+      "name": "QOMN v2.2 (JIT cold, no cache)",
       "median_ns": 38,
       "notes": "AVX2x4 path, 4 scenarios simultaneous. 209 ns/scenario at scale (4000 parallel).",
       "source": "Measured 2026-04-16 /plan/bench endpoint"
@@ -38,7 +38,7 @@
     {
       "name": "Rust scalar (-O3, no SIMD)",
       "median_ns": 4,
-      "notes": "rustc -O3 with volatile inputs to prevent elimination. Comparable to CRYS-L cold path.",
+      "notes": "rustc -O3 with volatile inputs to prevent elimination. Comparable to QOMN cold path.",
       "source": "Theoretical: Rust -O3 achieves ~2-6ns for 5 multiply/divide operations"
     },
     {
@@ -57,6 +57,6 @@
   "speedup_vs_python_scalar": "26x (cached) — 4.7x (cold JIT)",
   "speedup_vs_numpy": "400x (cached) — 74x (cold JIT)",
   "speedup_vs_gpt4": "1,714,285,714x (cached) — deterministic vs stochastic",
-  "key_finding": "CRYS-L achieves C++-comparable single-call latency while providing standards traceability, physics validation, and autonomous multi-objective optimization — features unavailable in C++/Rust/Python without significant additional engineering.",
+  "key_finding": "QOMN achieves C++-comparable single-call latency while providing standards traceability, physics validation, and autonomous multi-objective optimization — features unavailable in C++/Rust/Python without significant additional engineering.",
   "reproducibility_note": "Run benchmarks/repro.sh on identical hardware to reproduce. Expected ±15% variation on same hardware."
 }

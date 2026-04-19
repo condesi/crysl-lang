@@ -1,4 +1,25 @@
-# QOMN v2.3 — QOMN Language
+> ## 🗄️ ARCHIVED — This repository has been consolidated
+>
+> This repo (`crysl-lang`) is **read-only legacy**. The QOMN project has been
+> consolidated into two active repositories. Please use those for any
+> new development, issues, or contributions:
+>
+> - **Runtime and standard library:** [`github.com/condesi/qomn`](https://github.com/condesi/qomn)
+>   — Rust source, Cranelift JIT backend, `.qomn` stdlib, tests, install script
+> - **Academic paper and reproducibility artifact:** [`github.com/condesi/qomn-paper`](https://github.com/condesi/qomn-paper)
+>   — LaTeX source, bibliography, reproducibility scripts, public preprint
+>
+> **Live demo (unchanged):** [desarrollador.xyz/benchmark.html](https://desarrollador.xyz/benchmark.html)
+>
+> Existing clones of this repo continue to work for historical reference.
+> Existing external links (papers citing this URL, etc.) remain valid since
+> GitHub preserves archived repositories indefinitely.
+>
+> — Percy Rojas Masgo, April 2026
+
+---
+
+# QOMN v2.3 — QOMN Language  *(archived)*
 
 **Created by Percy Rojas Masgo — Condesi Perú / Qomni AI Lab**
 **Open standard for deterministic engineering calculations.**

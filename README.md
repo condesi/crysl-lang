@@ -2,7 +2,7 @@
 
 **Created by Percy Rojas Masgo — Condesi Perú / Qomni AI Lab**
 **Open standard for deterministic engineering calculations.**
-MIT License · [Live Demo](https://qomni.clanmarketer.com/qomn/) · [Paper](paper/QOMN_JIT_Paper_2026.md)
+MIT License · [Live Demo](https://desarrollador.xyz/benchmark.html) · [Paper](paper/QOMN_JIT_Paper_2026.md)
 **Spec v2.3 RC** — Cranelift native JIT, L4 Register ABI, OracleCache, simulation engine, 13 stdlib domains.
 
 > Write an engineering calculation once. Get **exact answers** in **nanoseconds on the JIT hot path**,
@@ -13,7 +13,7 @@ MIT License · [Live Demo](https://qomni.clanmarketer.com/qomn/) · [Paper](pape
 ## Quick Start — Try It Now
 
 **Online (browser, no install):**
-👉 [qomni.clanmarketer.com/qomn/](https://qomni.clanmarketer.com/qomn/)
+👉 [desarrollador.xyz/benchmark.html](https://desarrollador.xyz/benchmark.html)
 
 ```
 plan_pump_sizing(500, 100, 0.75)
@@ -419,4 +419,4 @@ and accessible everywhere — contribute to QOMN or reach out:
 ---
 
 *Built by Percy Rojas Masgo · CEO Condesi Perú · Qomni AI Lab*
-*Live at [qomni.clanmarketer.com/qomn/](https://qomni.clanmarketer.com/qomn/)*
+*Live at [desarrollador.xyz/benchmark.html](https://desarrollador.xyz/benchmark.html)*
